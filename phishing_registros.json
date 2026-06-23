@@ -1,0 +1,296 @@
+{
+  "registros": [
+    {
+      "id": 29,
+      "ch": "VISITA_INICIAL",
+      "password": "NO_INGRESADA",
+      "ipAddress": "192.168.28.254",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36 Edg/149.0.0.0",
+      "pagina": "http://192.168.8.90:5173/carven2",
+      "fechaHora": "2026-06-17T20:25:18.486Z",
+      "tipo": "visita"
+    },
+    {
+      "id": 28,
+      "ch": "VISITA_INICIAL",
+      "password": "NO_INGRESADA",
+      "ipAddress": "192.168.28.254",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36 Edg/149.0.0.0",
+      "pagina": "http://192.168.8.90:5173/carven2",
+      "fechaHora": "2026-06-17T20:25:18.486Z",
+      "tipo": "visita"
+    },
+    {
+      "id": 27,
+      "ch": "VISITA_INICIAL",
+      "password": "NO_INGRESADA",
+      "ipAddress": "192.168.28.254",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36 Edg/149.0.0.0",
+      "pagina": "http://192.168.8.90:5173/carven2",
+      "fechaHora": "2026-06-17T20:25:01.867Z",
+      "tipo": "visita"
+    },
+    {
+      "id": 26,
+      "ch": "VISITA_INICIAL",
+      "password": "NO_INGRESADA",
+      "ipAddress": "192.168.28.254",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36 Edg/149.0.0.0",
+      "pagina": "http://192.168.8.90:5173/carven2",
+      "fechaHora": "2026-06-17T20:25:01.864Z",
+      "tipo": "visita"
+    },
+    {
+      "id": 25,
+      "ch": "VISITA_INICIAL",
+      "password": "NO_INGRESADA",
+      "ipAddress": "192.168.28.35",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
+      "pagina": "http://192.168.28.35:5173/carven2",
+      "fechaHora": "2026-06-13T19:02:44.768Z",
+      "tipo": "visita"
+    },
+    {
+      "id": 24,
+      "ch": "VISITA_INICIAL",
+      "password": "NO_INGRESADA",
+      "ipAddress": "192.168.28.35",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
+      "pagina": "http://192.168.28.35:5173/carven2",
+      "fechaHora": "2026-06-13T19:02:44.764Z",
+      "tipo": "visita"
+    },
+    {
+      "id": 23,
+      "ch": "CH23907",
+      "password": "asdasd",
+      "ipAddress": "192.168.28.8",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36 Edg/149.0.0.0",
+      "pagina": "http://carven2.grupoasecon.com.mx/carven2",
+      "fechaHora": "2026-06-10T19:10:12.777Z",
+      "tipo": "intento"
+    },
+    {
+      "id": 22,
+      "ch": "VISITA_INICIAL",
+      "password": "NO_INGRESADA",
+      "ipAddress": "192.168.28.35",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36 Edg/149.0.0.0",
+      "pagina": "http://carven2.grupoasecon.com.mx/carven2",
+      "fechaHora": "2026-06-10T19:10:09.567Z",
+      "tipo": "visita"
+    },
+    {
+      "id": 21,
+      "ch": "VISITA_INICIAL",
+      "password": "NO_INGRESADA",
+      "ipAddress": "192.168.28.35",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36 Edg/149.0.0.0",
+      "pagina": "http://carven2.grupoasecon.com.mx/carven2",
+      "fechaHora": "2026-06-10T19:10:09.566Z",
+      "tipo": "visita"
+    },
+    {
+      "id": 20,
+      "ch": "VISITA_INICIAL",
+      "password": "NO_INGRESADA",
+      "ipAddress": "192.168.28.35",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
+      "pagina": "http://carven2.grupoasecon.com.mx/carven2",
+      "fechaHora": "2026-06-08T14:51:41.721Z",
+      "tipo": "visita"
+    },
+    {
+      "id": 19,
+      "ch": "VISITA_INICIAL",
+      "password": "NO_INGRESADA",
+      "ipAddress": "192.168.28.35",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
+      "pagina": "http://carven2.grupoasecon.com.mx/carven2",
+      "fechaHora": "2026-06-08T14:51:41.720Z",
+      "tipo": "visita"
+    },
+    {
+      "id": 18,
+      "ch": "VISITA_INICIAL",
+      "password": "NO_INGRESADA",
+      "ipAddress": "192.168.28.35",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36 Edg/148.0.0.0",
+      "pagina": "http://carven2.grupoasecon.com.mx/carven2",
+      "fechaHora": "2026-06-05T15:32:53.402Z",
+      "tipo": "visita"
+    },
+    {
+      "id": 17,
+      "ch": "VISITA_INICIAL",
+      "password": "NO_INGRESADA",
+      "ipAddress": "192.168.28.35",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36 Edg/148.0.0.0",
+      "pagina": "http://carven2.grupoasecon.com.mx/carven2",
+      "fechaHora": "2026-06-05T15:32:53.401Z",
+      "tipo": "visita"
+    },
+    {
+      "id": 16,
+      "ch": "VISITA_INICIAL",
+      "password": "NO_INGRESADA",
+      "ipAddress": "192.168.28.35",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36 Edg/148.0.0.0",
+      "pagina": "http://carven2.grupoasecon.com.mx/carven2",
+      "fechaHora": "2026-06-05T15:26:24.418Z",
+      "tipo": "visita"
+    },
+    {
+      "id": 15,
+      "ch": "VISITA_INICIAL",
+      "password": "NO_INGRESADA",
+      "ipAddress": "192.168.28.35",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36 Edg/148.0.0.0",
+      "pagina": "http://carven2.grupoasecon.com.mx/carven2",
+      "fechaHora": "2026-06-05T15:26:24.417Z",
+      "tipo": "visita"
+    },
+    {
+      "id": 14,
+      "ch": "VISITA_INICIAL",
+      "password": "NO_INGRESADA",
+      "ipAddress": "192.168.28.35",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36 Edg/148.0.0.0",
+      "pagina": "http://carven2.grupoasecon.com.mx/carven2",
+      "fechaHora": "2026-06-05T15:21:53.405Z",
+      "tipo": "visita"
+    },
+    {
+      "id": 13,
+      "ch": "VISITA_INICIAL",
+      "password": "NO_INGRESADA",
+      "ipAddress": "192.168.28.35",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36 Edg/148.0.0.0",
+      "pagina": "http://carven2.grupoasecon.com.mx/carven2",
+      "fechaHora": "2026-06-05T15:21:53.403Z",
+      "tipo": "visita"
+    },
+    {
+      "id": 12,
+      "ch": "VISITA_INICIAL",
+      "password": "NO_INGRESADA",
+      "ipAddress": "192.168.28.35",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36 Edg/148.0.0.0",
+      "pagina": "http://carven2.grupoasecon.com.mx/carven2",
+      "fechaHora": "2026-06-05T15:16:24.418Z",
+      "tipo": "visita"
+    },
+    {
+      "id": 11,
+      "ch": "VISITA_INICIAL",
+      "password": "NO_INGRESADA",
+      "ipAddress": "192.168.28.35",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36 Edg/148.0.0.0",
+      "pagina": "http://carven2.grupoasecon.com.mx/carven2",
+      "fechaHora": "2026-06-05T15:16:24.416Z",
+      "tipo": "visita"
+    },
+    {
+      "id": 10,
+      "ch": "VISITA_INICIAL",
+      "password": "NO_INGRESADA",
+      "ipAddress": "192.168.28.35",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36 Edg/148.0.0.0",
+      "pagina": "http://carven2.grupoasecon.com.mx/carven2",
+      "fechaHora": "2026-06-05T15:11:53.428Z",
+      "tipo": "visita"
+    },
+    {
+      "id": 9,
+      "ch": "VISITA_INICIAL",
+      "password": "NO_INGRESADA",
+      "ipAddress": "192.168.28.35",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36 Edg/148.0.0.0",
+      "pagina": "http://carven2.grupoasecon.com.mx/carven2",
+      "fechaHora": "2026-06-05T15:11:53.427Z",
+      "tipo": "visita"
+    },
+    {
+      "id": 8,
+      "ch": "CH23907",
+      "password": "asdsadasd",
+      "ipAddress": "192.168.28.15",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36 Edg/148.0.0.0",
+      "pagina": "http://carven2.grupoasecon.com.mx/carven2",
+      "fechaHora": "2026-06-05T15:06:50.251Z",
+      "tipo": "intento"
+    },
+    {
+      "id": 7,
+      "ch": "VISITA_INICIAL",
+      "password": "NO_INGRESADA",
+      "ipAddress": "192.168.28.35",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36 Edg/148.0.0.0",
+      "pagina": "http://carven2.grupoasecon.com.mx/carven2",
+      "fechaHora": "2026-06-05T15:06:31.163Z",
+      "tipo": "visita"
+    },
+    {
+      "id": 6,
+      "ch": "VISITA_INICIAL",
+      "password": "NO_INGRESADA",
+      "ipAddress": "192.168.28.35",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36 Edg/148.0.0.0",
+      "pagina": "http://carven2.grupoasecon.com.mx/carven2",
+      "fechaHora": "2026-06-05T15:06:31.161Z",
+      "tipo": "visita"
+    },
+    {
+      "id": 5,
+      "ch": "VISITA_INICIAL",
+      "password": "NO_INGRESADA",
+      "ipAddress": "192.168.28.35",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36 Edg/148.0.0.0",
+      "pagina": "http://carven2.grupoasecon.com.mx/carven2",
+      "fechaHora": "2026-06-05T15:04:42.863Z",
+      "tipo": "visita"
+    },
+    {
+      "id": 4,
+      "ch": "VISITA_INICIAL",
+      "password": "NO_INGRESADA",
+      "ipAddress": "192.168.28.35",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36 Edg/148.0.0.0",
+      "pagina": "http://carven2.grupoasecon.com.mx/carven2",
+      "fechaHora": "2026-06-05T15:04:42.861Z",
+      "tipo": "visita"
+    },
+    {
+      "id": 3,
+      "ch": "CH23907",
+      "password": "asdasda",
+      "ipAddress": "192.168.28.15",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36 Edg/148.0.0.0",
+      "pagina": "http://carven2.grupoasecon.com.mx/carven2",
+      "fechaHora": "2026-06-05T15:04:33.263Z",
+      "tipo": "intento"
+    },
+    {
+      "id": 2,
+      "ch": "VISITA_INICIAL",
+      "password": "NO_INGRESADA",
+      "ipAddress": "192.168.28.35",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36 Edg/148.0.0.0",
+      "pagina": "http://carven2.grupoasecon.com.mx/carven2",
+      "fechaHora": "2026-06-05T15:04:30.009Z",
+      "tipo": "visita"
+    },
+    {
+      "id": 1,
+      "ch": "VISITA_INICIAL",
+      "password": "NO_INGRESADA",
+      "ipAddress": "192.168.28.35",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36 Edg/148.0.0.0",
+      "pagina": "http://carven2.grupoasecon.com.mx/carven2",
+      "fechaHora": "2026-06-05T15:04:30.007Z",
+      "tipo": "visita"
+    }
+  ],
+  "currentId": 30,
+  "ultimaActualizacion": "2026-06-17T20:25:17.746Z"
+}

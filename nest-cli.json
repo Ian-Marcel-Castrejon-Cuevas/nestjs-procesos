@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json.schemastore.org/nest-cli",
+  "collection": "@nestjs/schematics",
+  "sourceRoot": "apps/nest-js_procesos/src",
+  "compilerOptions": {
+    "deleteOutDir": true,
+    "webpack": true,
+    "tsConfigPath": "apps/nest-js_procesos/tsconfig.app.json"
+  },
+  "monorepo": true,
+  "root": "apps/nest-js_procesos",
+  "projects": {
+    "nest-js_procesos": {
+      "type": "application",
+      "root": "apps/nest-js_procesos",
+      "entryFile": "main",
+      "sourceRoot": "apps/nest-js_procesos/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/nest-js_procesos/tsconfig.app.json"
+      }
+    },
+    "generador_reporte_ivr_reminder": {
+      "type": "application",
+      "root": "apps/generador_reporte_ivr_reminder",
+      "entryFile": "main",
+      "sourceRoot": "apps/generador_reporte_ivr_reminder/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/generador_reporte_ivr_reminder/tsconfig.app.json"
+      }
+    }
+  }
+}
