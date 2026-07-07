@@ -14,7 +14,6 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import type { Response } from 'express';
 import { LeyendasService } from './leyendas.service';
 import { ProcesarArchivoDto } from './dto/procesar-archivo.dto';
-import * as path from 'path';
 
 @Controller('leyendas')
 export class LeyendasController {
@@ -53,18 +52,35 @@ export class LeyendasController {
         );
       }
 
-      const ext = file.originalname.split('.').pop()?.toLowerCase();
-      if (ext !== 'xlsx' && ext !== 'xls' && ext !== 'zip') {
+      if (!body.fecha || body.fecha.length !== 6) {
         throw new HttpException(
-          'Formato de archivo no soportado. Use .xlsx, .xls o .zip',
+          'Fecha no válida. Use formato DDMMYY',
           HttpStatus.BAD_REQUEST,
         );
       }
 
-      const result = await this.leyendasService.procesarArchivoSinZip(
+      if (!body.columnas || body.columnas.length === 0) {
+        throw new HttpException(
+          'Debes seleccionar al menos una columna',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+
+      const ext = file.originalname.split('.').pop()?.toLowerCase();
+      if (ext !== 'xlsx' && ext !== 'xls') {
+        throw new HttpException(
+          'Formato de archivo no soportado. Use .xlsx o .xls',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+
+      const result = await this.leyendasService.procesarArchivo(
         file.buffer,
         body.banco,
         body.tipo,
+        body.fecha,
+        body.columnas,
+        body.tipoGMF,
         file.originalname,
       );
 

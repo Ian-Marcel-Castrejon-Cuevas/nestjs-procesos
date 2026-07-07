@@ -3,8 +3,6 @@ import * as XLSX from 'xlsx';
 import * as fs from 'fs';
 import * as path from 'path';
 
-const AdmZip = require('adm-zip');
-
 @Injectable()
 export class LeyendasService {
   private readonly CHUNK_SIZE = 64999;
@@ -20,10 +18,13 @@ export class LeyendasService {
     }
   > = new Map();
 
-  async procesarArchivoSinZip(
+  async procesarArchivo(
     fileBuffer: Buffer,
     banco: string,
     tipoArchivo: string,
+    fecha: string,
+    columnasSeleccionadas: string[],
+    tipoGMF?: string,
     originalFilename?: string,
   ): Promise<{
     archivos: string[];
@@ -34,47 +35,23 @@ export class LeyendasService {
     registrosPorArchivo: number[];
     totalRegistros: number;
   }> {
-    console.log('========== INICIO PROCESAMIENTO SIN ZIP ==========');
-    console.log(`Banco: ${banco}, Tipo: ${tipoArchivo}`);
-    console.log(`Nombre archivo original: ${originalFilename}`);
-
-    const esZipPorExtension =
-      originalFilename?.toLowerCase().endsWith('.zip') || false;
+    console.log('========== INICIO PROCESAMIENTO ==========');
+    console.log(`Banco: ${banco}, Tipo: ${tipoArchivo}, Fecha: ${fecha}`);
+    console.log(`Columnas seleccionadas: ${columnasSeleccionadas.join(', ')}`);
+    if (tipoGMF) console.log(`Tipo GMF: ${tipoGMF}`);
 
     let workbook;
-    let datosLimpios;
-
-    if (esZipPorExtension) {
-      console.log('📦 Detectado archivo ZIP por extensión, extrayendo...');
-      try {
-        const excelBuffer = await this.extraerExcelDeZip(fileBuffer);
-        workbook = XLSX.read(excelBuffer, {
-          type: 'buffer',
-          cellFormula: false,
-          cellHTML: false,
-          cellNF: false,
-          sheetStubs: false,
-        });
-      } catch (error) {
-        console.error('Error extrayendo ZIP:', error);
-        throw new Error(
-          'No se pudo extraer el archivo Excel del ZIP. Asegúrate de que el ZIP contenga un archivo .xlsx o .xls',
-        );
-      }
-    } else {
-      console.log('📄 Procesando archivo Excel directamente');
-      try {
-        workbook = XLSX.read(fileBuffer, {
-          type: 'buffer',
-          cellFormula: false,
-          cellHTML: false,
-          cellNF: false,
-          sheetStubs: false,
-        });
-      } catch (error) {
-        console.error('Error leyendo Excel:', error);
-        throw new Error('El archivo no es un Excel válido o está corrupto');
-      }
+    try {
+      workbook = XLSX.read(fileBuffer, {
+        type: 'buffer',
+        cellFormula: false,
+        cellHTML: false,
+        cellNF: false,
+        sheetStubs: false,
+      });
+    } catch (error) {
+      console.error('Error leyendo Excel:', error);
+      throw new Error('El archivo no es un Excel válido o está corrupto');
     }
 
     const nombreHoja = workbook.SheetNames[0];
@@ -86,23 +63,49 @@ export class LeyendasService {
       blankrows: true,
     });
 
-    datosLimpios = this.limpiarDatos(jsonData as any[][]);
+    const datosLimpios = this.limpiarDatos(jsonData as any[][]);
 
     if (!datosLimpios || datosLimpios.length === 0) {
       throw new Error('El archivo está vacío o corrupto');
     }
 
-    console.log(
-      `Original: ${datosLimpios[0]?.length || 0} columnas, ${datosLimpios.length} filas`,
-    );
-
     const encabezadosOriginales = datosLimpios[0];
-    const { nuevosEncabezados, indicesColumnas } =
-      this.detectarColumnasFlexible(encabezadosOriginales, banco, tipoArchivo);
 
-    console.log(
-      `Columnas que se conservarán: ${nuevosEncabezados.join(' | ')}`,
-    );
+    // Encontrar índices de las columnas seleccionadas
+    const indicesColumnas: number[] = [];
+    const nuevosEncabezados: string[] = [];
+
+    for (const columnaSeleccionada of columnasSeleccionadas) {
+      const index = encabezadosOriginales.findIndex(
+        (h) =>
+          h &&
+          h.toString().toLowerCase().trim() ===
+            columnaSeleccionada.toLowerCase().trim(),
+      );
+      if (index !== -1) {
+        indicesColumnas.push(index);
+        nuevosEncabezados.push(encabezadosOriginales[index]);
+      } else {
+        // Si no se encuentra la columna, buscar con variaciones
+        let encontrado = false;
+        for (let i = 0; i < encabezadosOriginales.length; i++) {
+          const header =
+            encabezadosOriginales[i]?.toString().toLowerCase().trim() || '';
+          if (header.includes(columnaSeleccionada.toLowerCase().trim())) {
+            indicesColumnas.push(i);
+            nuevosEncabezados.push(encabezadosOriginales[i]);
+            encontrado = true;
+            break;
+          }
+        }
+        if (!encontrado) {
+          indicesColumnas.push(-1);
+          nuevosEncabezados.push(columnaSeleccionada);
+        }
+      }
+    }
+
+    console.log(`Columnas finales: ${nuevosEncabezados.join(' | ')}`);
 
     let filasData = datosLimpios.slice(1);
     console.log(`Total de registros a procesar: ${filasData.length}`);
@@ -127,28 +130,27 @@ export class LeyendasService {
     const registrosPorArchivo: number[] = [];
     for (let idx = 0; idx < chunks.length; idx++) {
       registrosPorArchivo.push(chunks[idx].length);
-      console.log(
-        `  Archivo ${idx + 1}: ${chunks[idx].length} registros + 1 título = ${chunks[idx].length + 1} filas totales`,
-      );
+      console.log(`  Archivo ${idx + 1}: ${chunks[idx].length} registros`);
     }
 
     const sessionId = `${banco}_${Date.now()}_${Math.random().toString(36).substring(7)}`;
     const tempDir = path.join(process.cwd(), 'temp', sessionId);
     fs.mkdirSync(tempDir, { recursive: true });
 
-    const fecha = new Date();
-    const fechaStr = this.formatearFecha(fecha);
     const archivosGenerados: string[] = [];
     const nombresGenerados: string[] = [];
     const tamanosGenerados: number[] = [];
 
-    const nombreBanco = this.obtenerNombreBanco(banco);
-    let prefijo = '';
-    if (tipoArchivo === 'LEYENDAS') {
-      prefijo = 'LEY_';
-    } else if (tipoArchivo === 'GESTIONES') {
-      prefijo = 'GES_';
+    // Generar nombre base
+    let prefijo = tipoArchivo === 'LEYENDAS' ? 'LEY' : 'GEST';
+    let cartera = this.obtenerNombreBanco(banco);
+    let extra = '';
+
+    if (banco === 'GMF' && tipoGMF) {
+      extra = `_${tipoGMF}`;
     }
+
+    const nombreBase = `${prefijo}_${cartera}${extra}_${fecha}`;
 
     for (let idx = 0; idx < chunks.length; idx++) {
       const chunk = chunks[idx];
@@ -172,19 +174,19 @@ export class LeyendasService {
       delete newSheet['!cols'];
       delete newSheet['!rows'];
 
-      XLSX.utils.book_append_sheet(newWorkbook, newSheet, 'Sheet1');
+      XLSX.utils.book_append_sheet(newWorkbook, newSheet, 'Hoja1');
 
       let fileName: string;
       if (chunks.length === 1) {
-        fileName = `${prefijo}${nombreBanco}_${fechaStr}.xls`;
+        fileName = `${nombreBase}.xlsx`;
       } else {
-        fileName = `${prefijo}${nombreBanco}_${fechaStr}_${String(idx + 1).padStart(2, '0')}.xls`;
+        fileName = `${nombreBase}_${idx + 1}.xlsx`;
       }
 
       const filePath = path.join(tempDir, fileName);
 
       XLSX.writeFile(newWorkbook, filePath, {
-        bookType: 'xls',
+        bookType: 'xlsx',
         type: 'file',
       });
 
@@ -213,7 +215,7 @@ export class LeyendasService {
       this.limpiarSesion(sessionId);
     }, 3600000);
 
-    console.log('========== FIN PROCESAMIENTO SIN ZIP ==========');
+    console.log('========== FIN PROCESAMIENTO ==========');
     console.log(`Sesión: ${sessionId}`);
     console.log(`Archivos generados: ${archivosGenerados.length}`);
 
@@ -228,34 +230,109 @@ export class LeyendasService {
     };
   }
 
-  private async extraerExcelDeZip(zipBuffer: Buffer): Promise<Buffer> {
-    const zip = new AdmZip(zipBuffer);
-    const zipEntries = zip.getEntries();
-
-    console.log(
-      `Buscando archivos Excel en ZIP. Total entradas: ${zipEntries.length}`,
-    );
-
-    const excelEntry = zipEntries.find(
-      (entry) =>
-        !entry.isDirectory &&
-        (entry.entryName.toLowerCase().endsWith('.xlsx') ||
-          entry.entryName.toLowerCase().endsWith('.xls')),
-    );
-
-    if (!excelEntry) {
-      const filesInZip = zipEntries
-        .filter((entry) => !entry.isDirectory)
-        .map((entry) => entry.entryName)
-        .join(', ');
-      console.log(`Archivos encontrados en ZIP: ${filesInZip}`);
-      throw new Error(
-        `No se encontró ningún archivo Excel (.xlsx o .xls) dentro del ZIP. Archivos encontrados: ${filesInZip || 'ninguno'}`,
+  private procesarFilas(
+    filasData: any[][],
+    indicesColumnas: number[],
+    nuevosEncabezados: string[],
+  ): any[][] {
+    // Función para verificar si un valor es una fecha
+    const esFecha = (valor: any): boolean => {
+      return (
+        valor !== null &&
+        valor !== undefined &&
+        typeof valor === 'object' &&
+        Object.prototype.toString.call(valor) === '[object Date]' &&
+        !isNaN(valor.getTime())
       );
+    };
+
+    return filasData.map((fila: any[]) => {
+      const nuevaFila: any[] = [];
+      for (let i = 0; i < nuevosEncabezados.length; i++) {
+        const idxOriginal = indicesColumnas[i];
+        let valor: any = '';
+
+        if (
+          idxOriginal !== -1 &&
+          fila[idxOriginal] !== undefined &&
+          fila[idxOriginal] !== null
+        ) {
+          valor = fila[idxOriginal];
+        }
+
+        // Convertir a string según el tipo
+        if (typeof valor === 'number') {
+          valor = String(valor);
+        } else if (esFecha(valor)) {
+          valor = this.formatearFechaExcel(valor);
+        } else if (valor === undefined || valor === null) {
+          valor = '';
+        } else if (typeof valor === 'object') {
+          // Si es un objeto que no es fecha, intentar convertirlo a string
+          try {
+            valor = String(valor);
+          } catch {
+            valor = '';
+          }
+        }
+
+        nuevaFila.push(valor);
+      }
+      return nuevaFila;
+    });
+  }
+
+  private formatearFechaExcel(fecha: Date): string {
+    const dia = fecha.getDate().toString().padStart(2, '0');
+    const mes = (fecha.getMonth() + 1).toString().padStart(2, '0');
+    const anio = fecha.getFullYear();
+    return `${dia}/${mes}/${anio}`;
+  }
+
+  private limpiarDatos(datos: any[][]): any[][] {
+    if (!datos || datos.length === 0) return [];
+
+    let maxColumnas = 0;
+    for (const fila of datos) {
+      if (fila && fila.length > maxColumnas) {
+        maxColumnas = fila.length;
+      }
     }
 
-    console.log(`Archivo Excel encontrado en ZIP: ${excelEntry.entryName}`);
-    return excelEntry.getData();
+    const datosLimpios: any[][] = [];
+    for (let i = 0; i < datos.length; i++) {
+      const fila = datos[i];
+      if (!fila) continue;
+
+      const filaLimpia: any[] = [];
+      for (let j = 0; j < maxColumnas; j++) {
+        let valor = fila[j] !== undefined && fila[j] !== null ? fila[j] : '';
+        if (typeof valor === 'string') {
+          valor = valor.replace(/[^\x20-\x7E\u00A0-\u00FF]/g, ' ').trim();
+        }
+        filaLimpia.push(valor);
+      }
+
+      const tieneDatos = filaLimpia.some(
+        (cell) => cell !== '' && cell !== null && cell !== undefined,
+      );
+      if (tieneDatos || i === 0) {
+        datosLimpios.push(filaLimpia);
+      }
+    }
+
+    return datosLimpios;
+  }
+
+  private obtenerNombreBanco(banco: string): string {
+    const nombres: Record<string, string> = {
+      SCOTIABANK: 'SCOT',
+      BBVA: 'BBVA',
+      ATT: 'ATT',
+      GMF: 'GMF',
+      TOYOTA: 'TYT',
+    };
+    return nombres[banco] || banco;
   }
 
   async getArchivoPorSession(
@@ -308,311 +385,6 @@ export class LeyendasService {
       }
       this.sessions.delete(sessionId);
     }
-  }
-
-  private detectarColumnasFlexible(
-    encabezadosOriginales: any[],
-    banco: string,
-    tipoArchivo: string,
-  ): { nuevosEncabezados: string[]; indicesColumnas: number[] } {
-    const encabezadosNormales = encabezadosOriginales.map((h) =>
-      h ? h.toString().toLowerCase().trim() : '',
-    );
-
-    console.log('\n📋 Encabezados encontrados en el archivo:');
-    console.log(encabezadosNormales.slice(0, 20));
-
-    let columnasBuscadas: string[] = [];
-    let descripcion = '';
-
-    if (tipoArchivo === 'LEYENDAS') {
-      columnasBuscadas = ['CLAVE', 'STATUS', 'FOLIO', 'LEYENDA'];
-      descripcion = 'LEYENDAS';
-    } else if (tipoArchivo === 'GESTIONES') {
-      columnasBuscadas = [
-        'CLAVE',
-        'FECHA',
-        'TIPO',
-        'TELEFONO',
-        'COD_ACC',
-        'COD_RES',
-        'HORARIO',
-        'LEYENDA',
-      ];
-      descripcion = 'GESTIONES';
-    }
-
-    console.log(`\n🎯 Modo: ${banco} - ${descripcion}`);
-    console.log(`📌 Buscando columnas: ${columnasBuscadas.join(' | ')}`);
-
-    const indicesColumnas: number[] = [];
-    const nuevosEncabezados: string[] = [];
-
-    for (const columnaBuscada of columnasBuscadas) {
-      let index = -1;
-      let encontrado = '';
-
-      index = encabezadosNormales.findIndex(
-        (h) => h === columnaBuscada.toLowerCase(),
-      );
-
-      if (index === -1) {
-        if (columnaBuscada === 'CLAVE') {
-          const variaciones = [
-            'clave',
-            'cuenta',
-            'numero',
-            'id',
-            'identificador',
-            'codigo',
-          ];
-          for (const variacion of variaciones) {
-            index = encabezadosNormales.findIndex((h) => h.includes(variacion));
-            if (index !== -1) {
-              encontrado = variacion;
-              break;
-            }
-          }
-        } else if (columnaBuscada === 'FECHA') {
-          const variaciones = ['fecha', 'date', 'fech', 'dia'];
-          for (const variacion of variaciones) {
-            index = encabezadosNormales.findIndex((h) => h.includes(variacion));
-            if (index !== -1) {
-              encontrado = variacion;
-              break;
-            }
-          }
-        } else if (columnaBuscada === 'TIPO') {
-          const variaciones = ['tipo', 'type', 'categoria', 'clasificacion'];
-          for (const variacion of variaciones) {
-            index = encabezadosNormales.findIndex((h) => h.includes(variacion));
-            if (index !== -1) {
-              encontrado = variacion;
-              break;
-            }
-          }
-        } else if (columnaBuscada === 'TELEFONO') {
-          const variaciones = ['telefono', 'tel', 'phone', 'celular', 'movil'];
-          for (const variacion of variaciones) {
-            index = encabezadosNormales.findIndex((h) => h.includes(variacion));
-            if (index !== -1) {
-              encontrado = variacion;
-              break;
-            }
-          }
-        } else if (columnaBuscada === 'COD_ACC') {
-          const variaciones = [
-            'cod_acc',
-            'codigo',
-            'cod',
-            'cuenta',
-            'id_cuenta',
-          ];
-          for (const variacion of variaciones) {
-            index = encabezadosNormales.findIndex((h) => h.includes(variacion));
-            if (index !== -1) {
-              encontrado = variacion;
-              break;
-            }
-          }
-        } else if (columnaBuscada === 'COD_RES') {
-          const variaciones = ['cod_res', 'res', 'resultado', 'codigo_res'];
-          for (const variacion of variaciones) {
-            index = encabezadosNormales.findIndex((h) => h.includes(variacion));
-            if (index !== -1) {
-              encontrado = variacion;
-              break;
-            }
-          }
-        } else if (columnaBuscada === 'HORARIO') {
-          const variaciones = ['horario', 'hora', 'turno', 'schedule'];
-          for (const variacion of variaciones) {
-            index = encabezadosNormales.findIndex((h) => h.includes(variacion));
-            if (index !== -1) {
-              encontrado = variacion;
-              break;
-            }
-          }
-        } else if (columnaBuscada === 'STATUS') {
-          const variaciones = ['status', 'estado', 'situacion'];
-          for (const variacion of variaciones) {
-            index = encabezadosNormales.findIndex((h) => h.includes(variacion));
-            if (index !== -1) {
-              encontrado = variacion;
-              break;
-            }
-          }
-        } else if (columnaBuscada === 'FOLIO') {
-          const variaciones = ['folio', 'numero', 'referencia', 'num'];
-          for (const variacion of variaciones) {
-            index = encabezadosNormales.findIndex((h) => h.includes(variacion));
-            if (index !== -1) {
-              encontrado = variacion;
-              break;
-            }
-          }
-        } else if (columnaBuscada === 'LEYENDA') {
-          const variaciones = [
-            'leyenda',
-            'leyendas',
-            'descripcion',
-            'texto',
-            'mensaje',
-            'observacion',
-            'detalle',
-            'comentario',
-            'nota',
-            'glosa',
-            'concepto',
-            'motivo',
-          ];
-          for (const variacion of variaciones) {
-            index = encabezadosNormales.findIndex((h) => h.includes(variacion));
-            if (index !== -1) {
-              encontrado = variacion;
-              break;
-            }
-          }
-        }
-      }
-
-      if (index !== -1) {
-        indicesColumnas.push(index);
-        nuevosEncabezados.push(encabezadosOriginales[index]);
-        const mensaje = encontrado ? `(como "${encontrado}")` : '';
-        console.log(
-          `  ✓ Encontrado: "${columnaBuscada}" ${mensaje} → "${encabezadosOriginales[index]}"`,
-        );
-      } else {
-        indicesColumnas.push(-1);
-        nuevosEncabezados.push(columnaBuscada);
-        console.log(`  ✗ No encontrado: "${columnaBuscada}" (se creará vacío)`);
-      }
-    }
-
-    console.log(
-      `\nColumnas finales del archivo de salida: ${nuevosEncabezados.join(' | ')}`,
-    );
-    return { nuevosEncabezados, indicesColumnas };
-  }
-
-  private procesarFilas(
-    filasData: any[][],
-    indicesColumnas: number[],
-    nuevosEncabezados: string[],
-  ): any[][] {
-    return filasData.map((fila: any[]) => {
-      const nuevaFila: any[] = [];
-      for (let i = 0; i < nuevosEncabezados.length; i++) {
-        const idxOriginal = indicesColumnas[i];
-        let valor = '';
-
-        if (
-          idxOriginal !== -1 &&
-          fila[idxOriginal] !== undefined &&
-          fila[idxOriginal] !== null
-        ) {
-          valor = fila[idxOriginal];
-        }
-
-        const nombreColumna = nuevosEncabezados[i].toUpperCase();
-
-        if (
-          nombreColumna === 'CLAVE' ||
-          nombreColumna === 'FECHA' ||
-          nombreColumna === 'TELEFONO'
-        ) {
-          valor = this.convertirATexto(valor, nombreColumna);
-        } else if (typeof valor === 'number') {
-          valor = String(valor);
-        } else if (valor === undefined || valor === null) {
-          valor = '';
-        }
-
-        nuevaFila.push(valor);
-      }
-      return nuevaFila;
-    });
-  }
-
-  private convertirATexto(valor: any, columna: string): string {
-    if (valor === undefined || valor === null || valor === '') {
-      return '';
-    }
-
-    if (columna === 'FECHA' && typeof valor === 'number') {
-      const fecha = new Date(1900, 0, valor - 1);
-      const dia = fecha.getDate().toString().padStart(2, '0');
-      const mes = (fecha.getMonth() + 1).toString().padStart(2, '0');
-      const anio = fecha.getFullYear();
-      return `${dia}/${mes}/${anio}`;
-    }
-
-    if (
-      (columna === 'CLAVE' || columna === 'TELEFONO') &&
-      typeof valor === 'number'
-    ) {
-      return valor.toString();
-    }
-
-    if (typeof valor === 'string') {
-      return valor;
-    }
-
-    return String(valor);
-  }
-
-  private limpiarDatos(datos: any[][]): any[][] {
-    if (!datos || datos.length === 0) return [];
-
-    let maxColumnas = 0;
-    for (const fila of datos) {
-      if (fila && fila.length > maxColumnas) {
-        maxColumnas = fila.length;
-      }
-    }
-
-    const datosLimpios: any[][] = [];
-    for (let i = 0; i < datos.length; i++) {
-      const fila = datos[i];
-      if (!fila) continue;
-
-      const filaLimpia: any[] = [];
-      for (let j = 0; j < maxColumnas; j++) {
-        let valor = fila[j] !== undefined && fila[j] !== null ? fila[j] : '';
-        if (typeof valor === 'string') {
-          valor = valor.replace(/[^\x20-\x7E\u00A0-\u00FF]/g, ' ').trim();
-        }
-        filaLimpia.push(valor);
-      }
-
-      const tieneDatos = filaLimpia.some(
-        (cell) => cell !== '' && cell !== null && cell !== undefined,
-      );
-      if (tieneDatos || i === 0) {
-        datosLimpios.push(filaLimpia);
-      }
-    }
-
-    return datosLimpios;
-  }
-
-  private formatearFecha(fecha: Date): string {
-    const dia = fecha.getDate().toString().padStart(2, '0');
-    const mes = (fecha.getMonth() + 1).toString().padStart(2, '0');
-    const anio = fecha.getFullYear().toString().slice(-2);
-    return `${dia}${mes}${anio}`;
-  }
-
-  private obtenerNombreBanco(banco: string): string {
-    const nombres: Record<string, string> = {
-      SCOTIABANK: 'SCOT',
-      BBVA: 'BBVA',
-      ATT: 'ATT',
-      GMF: 'GMF',
-      TOYOTA: 'TOYOTA',
-    };
-    return nombres[banco] || banco;
   }
 
   async limpiarArchivosTemporales(tempDir: string) {
