@@ -10,7 +10,14 @@ import {
 } from '../constants/ccc-one.constants';
 
 @Injectable()
+/**
+ * Servicio para mover/almacenar archivos generados por CCC One en la red.
+ */
 export class CccOneStorageService {
+  /**
+   * Constructor.
+   * @param logger Servicio de logging para operaciones de almacenamiento CCC One.
+   */
   constructor(private logger: ReportLoggerService) {}
 
   async moverArchivo(

@@ -19,9 +19,24 @@ import {
 import { CANALES, Canal } from './constants/ccc-one.constants';
 
 @Injectable()
+/**
+ * Servicio que coordina la extracción de reportes desde CCC One usando
+ * Playwright y diferentes estrategias por canal.
+ */
 export class CccOneService {
   private canalesEstrategias: Map<Canal, BaseCanalStrategy>;
 
+  /**
+   * Constructor.
+   * @param logger Servicio de logging especializado en reportes.
+   * @param emailImapService Servicio IMAP para obtener enlaces de correo.
+   * @param playwrightService Servicio para manejo de Playwright.
+   * @param bbvaStrategy Estrategia BBVA.
+   * @param attStrategy Estrategia ATT.
+   * @param gmfStrategy Estrategia GMF.
+   * @param tytStrategy Estrategia TYT.
+   * @param scotStrategy Estrategia SCOT.
+   */
   constructor(
     private logger: ReportLoggerService,
     private emailImapService: EmailImapService,

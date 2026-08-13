@@ -1,3 +1,6 @@
+/**
+ * Utilidades de fecha usadas por los generadores de reportes.
+ */
 export class DateUtils {
   static getYesterday(): Date {
     const now = new Date();

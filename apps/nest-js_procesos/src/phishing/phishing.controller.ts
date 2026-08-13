@@ -15,6 +15,10 @@ import { PhishingService } from './phishing.service';
 import { RegistrarIntentoDto } from './dto/registrar-intento.dto';
 
 @Controller('phishing')
+/**
+ * Controlador HTTP para endpoints relacionados con registros de phishing.
+ * Expone rutas para registrar, listar, exportar y eliminar registros.
+ */
 export class PhishingController {
   constructor(private readonly phishingService: PhishingService) {}
 

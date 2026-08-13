@@ -13,9 +13,11 @@ import { Server, Socket } from 'socket.io';
   },
   namespace: 'phishing',
 })
-export class PhishingGateway
-  implements OnGatewayConnection, OnGatewayDisconnect
-{
+/**
+ * WebSocket gateway para eventos relacionados con phishing.
+ * Emite notificaciones en tiempo real sobre registros añadidos/eliminados.
+ */
+export class PhishingGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   server: Server;
 

@@ -16,6 +16,9 @@ interface EmailAttachment {
 }
 
 @Injectable()
+/**
+ * Servicio responsable de envío de correos específicos para CCC One.
+ */
 export class CccOneEmailService {
   private transporter: nodemailer.Transporter;
 

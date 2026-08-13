@@ -6,6 +6,9 @@ import { Canal } from '../constants/ccc-one.constants';
 import { CccOneStorageService } from '../services/ccc-one-storage.service';
 
 @Injectable()
+/**
+ * Estrategia para el canal GMF: pasos y selectores concretos para descarga.
+ */
 export class GmfCanalStrategy extends BaseCanalStrategy {
   constructor(
     logger: ReportLoggerService,

@@ -25,6 +25,10 @@ if (!pgHost || !pgPort || !pgUser || !pgPassword || !pgDatabase) {
   throw new Error('Faltan variables de entorno para PostgreSQL');
 }
 
+/**
+ * Pool de conexión a PostgreSQL compartido (exportado).
+ * Proporcionado a través del token `PG_POOL` para inyección.
+ */
 export const pgPool = new Pool({
   host: pgHost,
   port: parseInt(pgPort, 10),
@@ -33,6 +37,10 @@ export const pgPool = new Pool({
   database: pgDatabase,
 });
 
+/**
+ * Módulo de base de datos que expone `PG_POOL` para inyección.
+ * Verifica variables de entorno y crea el pool al iniciar.
+ */
 @Module({
   providers: [
     {

@@ -29,4 +29,7 @@ import { GMFStrategy } from './strategies/gmf.strategy';
   ],
   exports: [GeneradorService],
 })
+/**
+ * Módulo que agrupa los componentes del generador de reportes IVR.
+ */
 export class GeneradorModule {}

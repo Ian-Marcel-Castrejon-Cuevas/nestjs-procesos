@@ -3,10 +3,17 @@ import { chromium, Browser, Page } from 'playwright';
 import { ReportLoggerService } from './logger.service';
 
 @Injectable()
+/**
+ * Servicio que administra el lifecycle de Playwright y las páginas usadas por estrategias.
+ */
 export class PlaywrightService implements OnModuleDestroy {
   private browser: Browser | null = null;
   private currentPage: Page | null = null;
 
+    /**
+     * Constructor.
+     * @param logger Servicio de logging para registrar actividad de Playwright.
+     */
   constructor(private logger: ReportLoggerService) {
     this.initBrowser();
   }

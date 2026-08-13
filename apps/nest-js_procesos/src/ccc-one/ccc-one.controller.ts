@@ -3,6 +3,9 @@ import { CccOneService } from './ccc-one.service';
 import { ReportLoggerService } from '../generador_reporte_ivr_reminder/services/logger.service';
 
 @Controller('api/ccc-one')
+/**
+ * Controlador para operaciones relacionadas con CCC One (endpoints HTTP).
+ */
 export class CccOneController {
   constructor(
     private cccOneService: CccOneService,

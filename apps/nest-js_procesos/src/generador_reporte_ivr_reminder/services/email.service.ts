@@ -4,9 +4,17 @@ import { ReportLoggerService } from './logger.service';
 import { DateUtils } from '../utils/date.utils';
 
 @Injectable()
+/**
+ * Servicio de correo utilizado por el generador de reportes.
+ * Configura transporte SMTP y envía correos con adjuntos o resúmenes.
+ */
 export class EmailService {
   private transporter: nodemailer.Transporter;
 
+  /**
+   * Constructor: configura el transporte SMTP si hay variables de entorno.
+   * @param logger Servicio de logging para registrar advertencias y errores.
+   */
   constructor(private logger: ReportLoggerService) {
     const smtpHost = process.env.SMTP_HOST;
     const smtpPort = process.env.SMTP_PORT;

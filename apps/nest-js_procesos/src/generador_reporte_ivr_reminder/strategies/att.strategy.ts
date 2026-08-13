@@ -7,6 +7,9 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 
 @Injectable()
+/**
+ * Estrategia de generación de reporte para ATT (implementación concreta).
+ */
 export class AttStrategy extends BaseReportStrategy {
   constructor(logger: ReportLoggerService) {
     const config: StrategyConfig = {

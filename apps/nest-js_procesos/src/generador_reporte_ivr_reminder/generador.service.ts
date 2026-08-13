@@ -16,9 +16,24 @@ import { BbvaStrategy } from './strategies/bbva.strategy';
 import { GMFStrategy } from './strategies/gmf.strategy';
 
 @Injectable()
+/**
+ * Servicio que orquesta la generación de reportes IVR usando diversas estrategias.
+ * Maneja reintentos, notificaciones por correo y coordinación de estrategias.
+ */
 export class GeneradorService {
   private strategies: Map<string, any>;
 
+  /**
+   * Constructor.
+   * @param playwrightService Servicio para control de navegador Playwright.
+   * @param storageService Servicio para mover archivos a red.
+   * @param emailService Servicio de envío de correos.
+   * @param logger Servicio de logging para reportes.
+   * @param gmfStrategy Estrategia GMF.
+   * @param bbvaStrategy Estrategia BBVA.
+   * @param bbvaVigStrategy Estrategia BBVA_VIG.
+   * @param attStrategy Estrategia ATT.
+   */
   constructor(
     private playwrightService: PlaywrightService,
     private storageService: StorageService,

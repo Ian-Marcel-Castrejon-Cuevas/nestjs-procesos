@@ -58,4 +58,7 @@ console.log('=====================================');
     LeyendasModule,
   ],
 })
+/**
+ * Módulo raíz de la aplicación que agrupa e importa los submódulos.
+ */
 export class AppModule {}

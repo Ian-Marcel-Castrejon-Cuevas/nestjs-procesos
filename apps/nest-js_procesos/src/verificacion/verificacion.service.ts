@@ -7,7 +7,15 @@ import {
 import { Pool } from 'pg';
 
 @Injectable()
+/**
+ * Servicio para validaciones y consultas de verificación contra la BD.
+ * Provee métodos para verificar claves y limpiar ingresos antiguos.
+ */
 export class VerificacionService {
+  /**
+   * Constructor.
+   * @param pool Pool de conexiones `PG_POOL` inyectado para consultas PostgreSQL.
+   */
   constructor(@Inject('PG_POOL') private readonly pool: Pool) {}
 
   async verificarClaves(claves: string[]) {

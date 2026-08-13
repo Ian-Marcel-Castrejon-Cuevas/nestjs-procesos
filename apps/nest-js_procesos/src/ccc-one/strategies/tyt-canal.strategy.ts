@@ -6,6 +6,9 @@ import { Canal } from '../constants/ccc-one.constants';
 import { CccOneStorageService } from '../services/ccc-one-storage.service';
 
 @Injectable()
+/**
+ * Estrategia para el canal TYT: implementación de navegación y descarga.
+ */
 export class TytCanalStrategy extends BaseCanalStrategy {
   constructor(
     logger: ReportLoggerService,

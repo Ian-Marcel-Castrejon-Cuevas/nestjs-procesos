@@ -6,6 +6,9 @@ import { TIMEOUT_CONFIG_CCC, Canal } from '../constants/ccc-one.constants';
 import { CccOneStorageService } from '../services/ccc-one-storage.service';
 
 @Injectable()
+/**
+ * Estrategia para el canal BBVA: implementa pasos específicos de interacción.
+ */
 export class BbvaCanalStrategy extends BaseCanalStrategy {
   constructor(
     logger: ReportLoggerService,

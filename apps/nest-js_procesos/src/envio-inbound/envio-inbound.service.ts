@@ -12,11 +12,21 @@ import { LlamadaInbound } from './entities/llamada-inbound.entity';
 import { ExcelHelper } from './utils/excel-helper';
 
 @Injectable()
+/**
+ * Servicio responsable de generar y enviar el reporte Inbound.
+ * Consulta la tabla `Reporte_Inbound`, crea Excel/ZIP, guarda en red y
+ * envía por correo utilizando configuración SMTP.
+ */
 export class EnvioInboundService {
   private readonly logger = new Logger(EnvioInboundService.name);
   private transporter: nodemailer.Transporter;
   private networkPath: string;
 
+  /**
+   * Constructor.
+   * @param llamadaRepository Repository de `LlamadaInbound` inyectado por TypeORM.
+   * @param configService Servicio de configuración para acceder a variables de entorno.
+   */
   constructor(
     @InjectRepository(LlamadaInbound)
     private llamadaRepository: Repository<LlamadaInbound>,

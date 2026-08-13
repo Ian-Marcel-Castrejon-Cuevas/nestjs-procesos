@@ -11,6 +11,9 @@ import { GeneradorService } from './generador.service';
 import { ReportLoggerService } from './services/logger.service';
 
 @Controller('api/ivr-reminder')
+/**
+ * Controlador para invocar generación de reportes IVR desde HTTP.
+ */
 export class GeneradorController {
   constructor(
     private generadorService: GeneradorService,

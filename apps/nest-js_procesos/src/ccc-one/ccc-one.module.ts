@@ -36,3 +36,6 @@ import { ReportLoggerService } from '../generador_reporte_ivr_reminder/services/
   exports: [CccOneService],
 })
 export class CccOneModule {}
+/**
+ * Módulo que agrupa componentes de CCC One (servicios, controladores y utilidades).
+ */

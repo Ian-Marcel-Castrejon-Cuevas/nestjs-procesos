@@ -2,7 +2,14 @@ import { Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { EnvioInboundService } from './envio-inbound.service';
 
 @Controller('envio-inbound')
+/**
+ * Controlador para endpoints de generación y prueba del reporte Inbound.
+ */
 export class EnvioInboundController {
+  /**
+   * Constructor.
+   * @param envioInboundService Servicio que expone las operaciones de generación/prueba de reporte.
+   */
   constructor(private readonly envioInboundService: EnvioInboundService) {}
 
   private normalizarFecha(fechaStr: string): string {

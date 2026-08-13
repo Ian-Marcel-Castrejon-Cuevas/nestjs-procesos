@@ -7,7 +7,14 @@ import { DateUtils } from '../utils/date.utils';
 import { REPORT_TYPES, REPORT_CONFIGS } from '../constants/report.constants';
 
 @Injectable()
+/**
+ * Servicio para mover archivos temporales a almacenamiento de red.
+ */
 export class StorageService {
+  /**
+   * Constructor.
+   * @param logger Servicio de logging para operaciones de almacenamiento.
+   */
   constructor(private logger: ReportLoggerService) {}
 
   async moveToNetwork(tempPath: string, reportType: string): Promise<string> {

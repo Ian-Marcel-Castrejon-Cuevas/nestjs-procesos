@@ -4,6 +4,10 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 @Injectable()
+/**
+ * Servicio para procesar archivos de leyendas: segmentación en chunks,
+ * generación de Excel y gestión de sesiones temporales.
+ */
 export class LeyendasService {
   private readonly CHUNK_SIZE = 64999;
   private sessions: Map<

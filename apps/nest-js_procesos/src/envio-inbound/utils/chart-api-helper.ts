@@ -1,6 +1,9 @@
 import axios from 'axios';
 import { LlamadaTransformadaDto } from '../dto/reporte-inbound.dto';
 
+/**
+ * Helper que construye la configuración de gráficas y obtiene imágenes via QuickChart.
+ */
 export class ChartApiHelper {
   static async generarGraficaComoImagen(
     data: LlamadaTransformadaDto[],

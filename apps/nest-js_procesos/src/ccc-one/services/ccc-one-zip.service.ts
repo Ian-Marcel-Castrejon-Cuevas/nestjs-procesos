@@ -6,7 +6,14 @@ import { ReportLoggerService } from '../../generador_reporte_ivr_reminder/servic
 const AdmZip = require('adm-zip');
 
 @Injectable()
+/**
+ * Servicio encargado de crear archivos ZIP (y protegerlos si aplica).
+ */
 export class CccOneZipService {
+  /**
+   * Constructor.
+   * @param logger Servicio de logging para operaciones de zip.
+   */
   constructor(private logger: ReportLoggerService) {}
 
   convertirAZip(archivoAComprimir: string): string | null {

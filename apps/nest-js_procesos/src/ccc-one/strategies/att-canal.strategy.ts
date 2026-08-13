@@ -6,6 +6,9 @@ import { Canal } from '../constants/ccc-one.constants';
 import { CccOneStorageService } from '../services/ccc-one-storage.service';
 
 @Injectable()
+/**
+ * Estrategia para el canal ATT: navegación, filtros y descarga específicos.
+ */
 export class AttCanalStrategy extends BaseCanalStrategy {
   constructor(
     logger: ReportLoggerService,

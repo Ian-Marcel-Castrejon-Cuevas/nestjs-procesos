@@ -2,6 +2,9 @@ import * as ExcelJS from 'exceljs';
 import { LlamadaTransformadaDto } from '../dto/reporte-inbound.dto';
 import { ChartApiHelper } from './chart-api-helper';
 
+/**
+ * Helper para generación de archivos Excel con formato y estilos definidos.
+ */
 export class ExcelHelper {
   static async generarReporteExcel(
     data: LlamadaTransformadaDto[],

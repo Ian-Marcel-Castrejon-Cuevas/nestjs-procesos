@@ -15,3 +15,6 @@ import { EnvioInboundService } from './envio-inbound.service';
   exports: [EnvioInboundService],
 })
 export class EnvioInboundModule {}
+/**
+ * Módulo que encapsula la lógica de generación y envío de reportes Inbound.
+ */

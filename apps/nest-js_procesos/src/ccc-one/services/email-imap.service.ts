@@ -11,7 +11,14 @@ import {
 } from '../constants/ccc-one.constants';
 
 @Injectable()
+/**
+ * Servicio IMAP para lectura de correos (utilizado para obtener enlaces de descarga).
+ */
 export class EmailImapService {
+  /**
+   * Constructor.
+   * @param logger Servicio de logging para operaciones IMAP.
+   */
   constructor(private logger: ReportLoggerService) {}
 
   async obtenerLinkReporte(): Promise<CorreoResultado> {

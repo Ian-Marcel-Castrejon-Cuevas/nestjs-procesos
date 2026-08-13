@@ -4,6 +4,9 @@ import * as path from 'path';
 import * as fs from 'fs';
 
 @Injectable()
+/**
+ * Servicio de logging centralizado para reportes (envoltorio con niveles y formato).
+ */
 export class ReportLoggerService {
   private logger: winston.Logger;
 

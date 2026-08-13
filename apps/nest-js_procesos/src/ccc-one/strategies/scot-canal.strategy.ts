@@ -8,6 +8,9 @@ import { CccOneZipService } from '../services/ccc-one-zip.service';
 import { CccOneEmailService } from '../services/ccc-one-email.service';
 
 @Injectable()
+/**
+ * Estrategia para el canal SCOT: maneja descargas y particularidades de SCOT.
+ */
 export class ScotCanalStrategy extends BaseCanalStrategy {
   constructor(
     logger: ReportLoggerService,

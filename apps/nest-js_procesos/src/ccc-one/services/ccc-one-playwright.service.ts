@@ -8,11 +8,19 @@ import {
 } from '../constants/ccc-one.constants';
 
 @Injectable()
+/**
+ * Servicio que encapsula la interacción con Playwright para CCC One.
+ * Maneja la creación y cierre de páginas/navegadores.
+ */
 export class CccOnePlaywrightService implements OnModuleDestroy {
   private browser: Browser | null = null;
   private context: BrowserContext | null = null;
   private page: Page | null = null;
 
+  /**
+   * Constructor.
+   * @param logger Servicio de logging para registrar actividad de Playwright.
+   */
   constructor(private logger: ReportLoggerService) {}
 
   async iniciar(): Promise<Page | null> {

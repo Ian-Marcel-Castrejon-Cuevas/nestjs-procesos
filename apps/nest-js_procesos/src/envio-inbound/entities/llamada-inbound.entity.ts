@@ -1,5 +1,8 @@
 import { Column, Entity, PrimaryColumn } from 'typeorm';
 
+/**
+ * Entidad que mapea la tabla `Reporte_Inbound` en la base de datos.
+ */
 @Entity('Reporte_Inbound')
 export class LlamadaInbound {
   @PrimaryColumn({ name: 'ID_LLAMADA', type: 'varchar', length: 50 })

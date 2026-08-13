@@ -4,6 +4,11 @@ import * as cron from 'node-cron';
 import * as XLSX from 'xlsx';
 
 @Injectable()
+/**
+ * Servicio encargado de obtener reportes desde el portal y desde SQL,
+ * normalizar los datos y cargarlos en la tabla destino `reporte_inbound`.
+ * Implementa reintentos y utilidades de diagnóstico.
+ */
 export class ReporteService implements OnModuleInit {
   private readonly logger = new Logger(ReporteService.name);
   private readonly PORTAL_BASE_URL: string;
@@ -13,6 +18,9 @@ export class ReporteService implements OnModuleInit {
   private readonly MAX_REINTENTOS = 10;
   private readonly INTERVALO_REINTENTO = 60000; // 1 minuto
 
+  /**
+   * Constructor: inicializa variables de configuración del portal (lee env).
+   */
   constructor() {
     this.PORTAL_BASE_URL = this.obtenerVariableEntorno(
       'PORTAL_BASE_URL',
@@ -53,6 +61,11 @@ export class ReporteService implements OnModuleInit {
     return valor;
   }
 
+  /**
+   * Obtiene la configuración de conexión para la base de datos destino
+   * leyendo las variables de entorno (`DB_USER`, `DB_PASSWORD`, `DB_SERVER`,
+   * `DB_DATABASE`, `DB_PORT`). Lanza error si falta alguna variable.
+   */
   private getDbConfigDestino() {
     const user = process.env.DB_USER;
     const password = process.env.DB_PASSWORD;
@@ -77,6 +90,10 @@ export class ReporteService implements OnModuleInit {
     };
   }
 
+  /**
+   * Devuelve la configuración de conexión al origen (base de datos legacy).
+   * NOTA: actualmente contiene credenciales en claro; se recomienda externalizar.
+   */
   private getDbConfigOrigen() {
     return {
       user: 'sistemasAsecon',
@@ -91,6 +108,10 @@ export class ReporteService implements OnModuleInit {
     };
   }
 
+  /**
+   * Pausa asincrónica por `ms` milisegundos. Usada para backoff entre reintentos.
+   * @param ms Tiempo en milisegundos a esperar.
+   */
   private sleep(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms));
   }
@@ -174,6 +195,11 @@ export class ReporteService implements OnModuleInit {
     return fechaStr;
   }
 
+  /**
+   * Corrige textos mal escritos en la tabla `reporte_inbound` para la fecha dada.
+   * Realiza un UPDATE parametrizado en la base de datos destino.
+   * @param fechaStr Fecha en formato `YYYY-MM-DD`.
+   */
   private async corregirTextosEnTabla(fechaStr: string) {
     let connection: sql.ConnectionPool | null = null;
     try {
@@ -192,6 +218,11 @@ export class ReporteService implements OnModuleInit {
     }
   }
 
+  /**
+   * Autentica en el portal Nuxiba y establece `this.sessionCookies`.
+   * Maneja CSRF, cookies, redirecciones y errores de autenticación.
+   * Lanza excepción si no puede autenticarse.
+   */
   private async autenticarPortal(): Promise<void> {
     try {
       this.logger.log(`Iniciando autenticacion en portal Nuxiba`);
@@ -362,6 +393,11 @@ export class ReporteService implements OnModuleInit {
   private async obtenerUrlDescargaExcel(
     fechaStr: string,
   ): Promise<string | null> {
+    /**
+     * Busca en el portal la URL de descarga del Excel correspondiente a `fechaStr`.
+     * Devuelve la URL absoluta si se encuentra, o `null` en caso contrario.
+     * @param fechaStr Fecha en formato `YYYY-MM-DD`.
+     */
     try {
       const [dia, mes, año] = fechaStr.split('-');
       const nombreArchivoBuscado = `ReporteInbound_${año}-${mes}-${dia}.xls`;
@@ -521,6 +557,11 @@ export class ReporteService implements OnModuleInit {
   private async descargarExcelDesdePortalConReintentos(
     fechaStr: string,
   ): Promise<Buffer | null> {
+    /**
+     * Descarga el archivo Excel del portal con reintentos y backoff.
+     * Renueva sesión si es necesario y devuelve un `Buffer` con el contenido.
+     * @param fechaStr Fecha en formato `YYYY-MM-DD`.
+     */
     let intento = 0;
     let ultimoError: Error | null = null;
 
@@ -625,6 +666,13 @@ export class ReporteService implements OnModuleInit {
   }
 
   private transformarDatosExcel(data: any[], fechaStr: string): any[] {
+    /**
+     * Transforma las filas del Excel en el formato estandarizado que se
+     * inserta en la tabla `reporte_inbound`.
+     * Normaliza fechas, limpia cadenas y mapea campos.
+     * @param data Filas tal como vienen del Excel.
+     * @param fechaStr Fecha esperada en formato `YYYY-MM-DD`.
+     */
     const datosTransformados: any[] = [];
 
     for (const row of data) {
@@ -713,6 +761,11 @@ export class ReporteService implements OnModuleInit {
   }
 
   private async obtenerDatosExcelDesdePortal(fechaStr: string): Promise<any[]> {
+    /**
+     * Orquesta la descarga y lectura del Excel desde el portal, aplicando
+     * transformación de los datos y devolviendo un arreglo estandarizado.
+     * @param fechaStr Fecha en formato `YYYY-MM-DD`.
+     */
     try {
       const buffer =
         await this.descargarExcelDesdePortalConReintentos(fechaStr);
@@ -758,6 +811,11 @@ export class ReporteService implements OnModuleInit {
   }
 
   private async obtenerDatosSQL(fechaStr: string): Promise<any[]> {
+    /**
+     * Consulta la base de datos origen (RepInCallsDetail) para la fecha
+     * indicada y transforma el resultado al formato interno.
+     * @param fechaStr Fecha en formato `YYYY-MM-DD`.
+     */
     let connectionOrigen: sql.ConnectionPool | null = null;
 
     try {
@@ -874,6 +932,10 @@ export class ReporteService implements OnModuleInit {
     datosExcel: any[],
     datosSQL: any[],
   ): any[] {
+    /**
+     * Combina registros provenientes del Excel y de SQL, eliminando
+     * duplicados prioritizando el `ID_LLAMADA` y preservando registros sin ID.
+     */
     const mapa = new Map();
     const registrosSinID: any[] = [];
 
@@ -910,6 +972,12 @@ export class ReporteService implements OnModuleInit {
     datos: any[],
     fechaStr: string,
   ): Promise<{ insertados: number; errores: number }> {
+    /**
+     * Inserta los registros en la tabla destino `reporte_inbound`.
+     * Realiza inserciones parametrizadas y cuenta insertados/errores.
+     * @param datos Arreglo de registros transformados.
+     * @param fechaStr Fecha en formato `YYYY-MM-DD`.
+     */
     let connectionDestino: sql.ConnectionPool | null = null;
     let insertados = 0;
     let errores = 0;
@@ -972,6 +1040,12 @@ export class ReporteService implements OnModuleInit {
   }
 
   async procesarAmbasFuentesCombinadas(fechaStr: string) {
+    /**
+     * Realiza el procesamiento completo combinando datos desde el portal
+     * (Excel) y desde la base de datos SQL, deduplicando e insertando.
+     * Devuelve un objeto con métricas del procesamiento.
+     * @param fechaStr Fecha en formato `YYYY-MM-DD`.
+     */
     this.logger.log(`Procesando reporte para fecha: ${fechaStr}`);
 
     try {
@@ -1025,6 +1099,10 @@ export class ReporteService implements OnModuleInit {
   }
 
   async procesarReporteAyerConReintentos() {
+    /**
+     * Ejecuta el procesamiento del reporte del día anterior con reintentos
+     * y backoff. Renueva sesión y reintenta en caso de fallo.
+     */
     const hoy = new Date();
     const ayer = new Date(hoy);
     ayer.setDate(hoy.getDate() - 1);

@@ -7,6 +7,9 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 
 @Injectable()
+/**
+ * Estrategia BBVA_VIG para generación de reportes (con comportamiento específico).
+ */
 export class BbvaVigStrategy extends BaseReportStrategy {
   constructor(logger: ReportLoggerService) {
     const config: StrategyConfig = {

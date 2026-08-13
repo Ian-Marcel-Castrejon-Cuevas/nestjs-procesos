@@ -1,3 +1,6 @@
+/**
+ * DTO: resumen por campaña para el reporte Inbound.
+ */
 export class ResumenCampanaDto {
   Campaña: string;
   Area: string;
@@ -7,6 +10,9 @@ export class ResumenCampanaDto {
   Porcentaje_de_Abandono: number;
 }
 
+/**
+ * DTO: resumen por medio de contacto para el reporte Inbound.
+ */
 export class ResumenContactoDto {
   Area: string;
   Med_Contacto: string;
@@ -16,6 +22,9 @@ export class ResumenContactoDto {
   Porcentaje_de_Abandono: number;
 }
 
+/**
+ * DTO: representación transformada de una llamada para el reporte.
+ */
 export class LlamadaTransformadaDto {
   Fecha: Date;
   Hora: string;

@@ -14,11 +14,19 @@ export interface RegistroPhishing {
 }
 
 @Injectable()
+/**
+ * Servicio para gestionar registros de phishing en disco.
+ * Provee operaciones CRUD, exportación y estadísticas locales.
+ */
 export class PhishingService {
   private filePath: string;
   private registros: RegistroPhishing[] = [];
   private currentId = 1;
 
+  /**
+   * Constructor.
+   * Inicializa la ruta del archivo local y carga registros existentes desde disco.
+   */
   constructor() {
     this.filePath = path.join(process.cwd(), 'phishing_registros.json');
     this.cargarDatos();
