@@ -7,7 +7,7 @@ export class ReporteController {
 
   @Get('completo/:fecha')
   async procesarCompleto(@Param('fecha') fecha: string) {
-    return this.reporteService.procesarAmbasFuentes(fecha);
+    return this.reporteService.procesarAmbasFuentesCombinadas(fecha);
   }
 
   @Get('excel/:fecha')
@@ -45,6 +45,7 @@ export class ReporteController {
     const resultados: any = {
       destino: { conectado: false, error: null, data: null },
       origen: { conectado: false, error: null, data: null },
+      portal: { conectado: false, error: null, data: null },
       timestamp: new Date().toISOString(),
     };
 
@@ -64,11 +65,39 @@ export class ReporteController {
       resultados.origen.error = error.message;
     }
 
+    try {
+      const portal = await this.reporteService.probarAutenticacionPortal();
+      resultados.portal.conectado = portal.success;
+      resultados.portal.data = portal;
+    } catch (error) {
+      resultados.portal.error = error.message;
+    }
+
     return resultados;
   }
 
   @Get('diagnostico/tabla-origen')
   async diagnosticarTablaOrigen() {
     return this.reporteService.probarTablaOrigen();
+  }
+
+  @Get('diagnostico/portal')
+  async diagnosticarPortal() {
+    return this.reporteService.probarAutenticacionPortal();
+  }
+
+  @Get('diagnostico/descarga/:fecha')
+  async diagnosticarDescarga(@Param('fecha') fecha: string) {
+    return this.reporteService.probarDescargaExcel(fecha);
+  }
+
+  @Get('diagnostico/sql/:fecha')
+  async diagnosticarSQL(@Param('fecha') fecha: string) {
+    return this.reporteService.diagnosticarSQL(fecha);
+  }
+
+  @Get('diagnostico/archivos')
+  async listarArchivos() {
+    return this.reporteService.listarArchivosDisponibles();
   }
 }

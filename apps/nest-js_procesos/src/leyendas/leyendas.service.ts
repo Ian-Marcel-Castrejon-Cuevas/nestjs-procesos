@@ -35,11 +35,6 @@ export class LeyendasService {
     registrosPorArchivo: number[];
     totalRegistros: number;
   }> {
-    console.log('========== INICIO PROCESAMIENTO ==========');
-    console.log(`Banco: ${banco}, Tipo: ${tipoArchivo}, Fecha: ${fecha}`);
-    console.log(`Columnas seleccionadas: ${columnasSeleccionadas.join(', ')}`);
-    if (tipoGMF) console.log(`Tipo GMF: ${tipoGMF}`);
-
     let workbook;
     try {
       workbook = XLSX.read(fileBuffer, {
@@ -50,8 +45,7 @@ export class LeyendasService {
         sheetStubs: false,
       });
     } catch (error) {
-      console.error('Error leyendo Excel:', error);
-      throw new Error('El archivo no es un Excel válido o está corrupto');
+      throw new Error('El archivo no es un Excel valido o esta corrupto');
     }
 
     const nombreHoja = workbook.SheetNames[0];
@@ -66,12 +60,11 @@ export class LeyendasService {
     const datosLimpios = this.limpiarDatos(jsonData as any[][]);
 
     if (!datosLimpios || datosLimpios.length === 0) {
-      throw new Error('El archivo está vacío o corrupto');
+      throw new Error('El archivo esta vacio o corrupto');
     }
 
     const encabezadosOriginales = datosLimpios[0];
 
-    // Encontrar índices de las columnas seleccionadas
     const indicesColumnas: number[] = [];
     const nuevosEncabezados: string[] = [];
 
@@ -86,7 +79,6 @@ export class LeyendasService {
         indicesColumnas.push(index);
         nuevosEncabezados.push(encabezadosOriginales[index]);
       } else {
-        // Si no se encuentra la columna, buscar con variaciones
         let encontrado = false;
         for (let i = 0; i < encabezadosOriginales.length; i++) {
           const header =
@@ -105,18 +97,13 @@ export class LeyendasService {
       }
     }
 
-    console.log(`Columnas finales: ${nuevosEncabezados.join(' | ')}`);
-
     let filasData = datosLimpios.slice(1);
-    console.log(`Total de registros a procesar: ${filasData.length}`);
 
     let filasProcesadas = this.procesarFilas(
       filasData,
       indicesColumnas,
       nuevosEncabezados,
     );
-
-    console.log(`Registros procesados: ${filasProcesadas.length}`);
 
     const chunks: any[][][] = [];
     for (let i = 0; i < filasProcesadas.length; i += this.CHUNK_SIZE) {
@@ -126,11 +113,9 @@ export class LeyendasService {
       }
     }
 
-    console.log(`\n📊 División en ${chunks.length} archivo(s):`);
     const registrosPorArchivo: number[] = [];
     for (let idx = 0; idx < chunks.length; idx++) {
       registrosPorArchivo.push(chunks[idx].length);
-      console.log(`  Archivo ${idx + 1}: ${chunks[idx].length} registros`);
     }
 
     const sessionId = `${banco}_${Date.now()}_${Math.random().toString(36).substring(7)}`;
@@ -141,7 +126,6 @@ export class LeyendasService {
     const nombresGenerados: string[] = [];
     const tamanosGenerados: number[] = [];
 
-    // Generar nombre base
     let prefijo = tipoArchivo === 'LEYENDAS' ? 'LEY' : 'GEST';
     let cartera = this.obtenerNombreBanco(banco);
     let extra = '';
@@ -178,15 +162,15 @@ export class LeyendasService {
 
       let fileName: string;
       if (chunks.length === 1) {
-        fileName = `${nombreBase}.xlsx`;
+        fileName = `${nombreBase}.xls`;
       } else {
-        fileName = `${nombreBase}_${idx + 1}.xlsx`;
+        fileName = `${nombreBase}_${idx + 1}.xls`;
       }
 
       const filePath = path.join(tempDir, fileName);
 
       XLSX.writeFile(newWorkbook, filePath, {
-        bookType: 'xlsx',
+        bookType: 'xls',
         type: 'file',
       });
 
@@ -194,12 +178,11 @@ export class LeyendasService {
         archivosGenerados.push(filePath);
         nombresGenerados.push(fileName);
         tamanosGenerados.push(fs.statSync(filePath).size);
-        console.log(`Generado: ${fileName} (${chunk.length} registros)`);
       }
     }
 
     if (archivosGenerados.length === 0) {
-      throw new Error('No se pudo generar ningún archivo');
+      throw new Error('No se pudo generar ningun archivo');
     }
 
     this.sessions.set(sessionId, {
@@ -214,10 +197,6 @@ export class LeyendasService {
     setTimeout(() => {
       this.limpiarSesion(sessionId);
     }, 3600000);
-
-    console.log('========== FIN PROCESAMIENTO ==========');
-    console.log(`Sesión: ${sessionId}`);
-    console.log(`Archivos generados: ${archivosGenerados.length}`);
 
     return {
       archivos: archivosGenerados,
@@ -235,7 +214,6 @@ export class LeyendasService {
     indicesColumnas: number[],
     nuevosEncabezados: string[],
   ): any[][] {
-    // Función para verificar si un valor es una fecha
     const esFecha = (valor: any): boolean => {
       return (
         valor !== null &&
@@ -260,7 +238,6 @@ export class LeyendasService {
           valor = fila[idxOriginal];
         }
 
-        // Convertir a string según el tipo
         if (typeof valor === 'number') {
           valor = String(valor);
         } else if (esFecha(valor)) {
@@ -268,7 +245,6 @@ export class LeyendasService {
         } else if (valor === undefined || valor === null) {
           valor = '';
         } else if (typeof valor === 'object') {
-          // Si es un objeto que no es fecha, intentar convertirlo a string
           try {
             valor = String(valor);
           } catch {
@@ -341,7 +317,7 @@ export class LeyendasService {
   ): Promise<{ filePath: string; fileName: string }> {
     const session = this.sessions.get(sessionId);
     if (!session) {
-      throw new Error('Sesión no encontrada o expirada');
+      throw new Error('Sesion no encontrada o expirada');
     }
     if (!session.archivos[fileIndex]) {
       throw new Error('Archivo no encontrado');
@@ -355,7 +331,7 @@ export class LeyendasService {
   async getSessionInfo(sessionId: string) {
     const session = this.sessions.get(sessionId);
     if (!session) {
-      throw new Error('Sesión no encontrada o expirada');
+      throw new Error('Sesion no encontrada o expirada');
     }
     return {
       sessionId: sessionId,
@@ -378,10 +354,9 @@ export class LeyendasService {
             recursive: true,
             force: true,
           });
-          console.log(`🧹 Sesión ${sessionId} limpiada correctamente`);
         }
       } catch (error) {
-        console.error(`Error limpiando sesión ${sessionId}:`, error);
+        // Error silencioso
       }
       this.sessions.delete(sessionId);
     }
@@ -391,10 +366,7 @@ export class LeyendasService {
     try {
       if (fs.existsSync(tempDir)) {
         await fs.promises.rm(tempDir, { recursive: true, force: true });
-        console.log('🧹 Limpieza completada');
       }
-    } catch (error) {
-      console.error('Error limpiando:', error);
-    }
+    } catch (error) {}
   }
 }

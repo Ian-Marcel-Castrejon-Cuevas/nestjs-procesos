@@ -6,6 +6,52 @@ import * as XLSX from 'xlsx';
 @Injectable()
 export class ReporteService implements OnModuleInit {
   private readonly logger = new Logger(ReporteService.name);
+  private readonly PORTAL_BASE_URL: string;
+  private readonly PORTAL_USER: string;
+  private readonly PORTAL_PASSWORD: string;
+  private sessionCookies: string = '';
+  private readonly MAX_REINTENTOS = 10;
+  private readonly INTERVALO_REINTENTO = 60000; // 1 minuto
+
+  constructor() {
+    this.PORTAL_BASE_URL = this.obtenerVariableEntorno(
+      'PORTAL_BASE_URL',
+      'https://cwxion66.nuxiba.com/sitioreportes',
+    );
+    this.PORTAL_USER = this.obtenerVariableEntorno(
+      'PORTAL_USER',
+      'admin_cliente',
+    );
+    this.PORTAL_PASSWORD = this.obtenerVariableEntorno(
+      'PORTAL_PASSWORD',
+      'V9#qL7@mX2!rN8',
+    );
+
+    this.logger.log(`Portal configurado: ${this.PORTAL_BASE_URL}`);
+    this.logger.log(`Usuario: ${this.PORTAL_USER}`);
+    this.logger.log(`Contraseña: ${'*'.repeat(this.PORTAL_PASSWORD.length)}`);
+  }
+
+  private obtenerVariableEntorno(
+    nombre: string,
+    valorPorDefecto: string,
+  ): string {
+    let valor = process.env[nombre];
+
+    if (!valor) {
+      return valorPorDefecto;
+    }
+
+    valor = valor.trim();
+    if (
+      (valor.startsWith('"') && valor.endsWith('"')) ||
+      (valor.startsWith("'") && valor.endsWith("'"))
+    ) {
+      valor = valor.slice(1, -1);
+    }
+
+    return valor;
+  }
 
   private getDbConfigDestino() {
     const user = process.env.DB_USER;
@@ -45,6 +91,10 @@ export class ReporteService implements OnModuleInit {
     };
   }
 
+  private sleep(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
   async onModuleInit() {
     try {
       let testDestinoConn: sql.ConnectionPool | null = null;
@@ -59,10 +109,17 @@ export class ReporteService implements OnModuleInit {
         if (testOrigenConn) testOrigenConn.close();
       }
 
-      cron.schedule('00 03 * * *', () => {
+      cron.schedule('00 07 * * *', () => {
         this.logger.log('Ejecutando tarea programada');
-        this.procesarReporteAyer();
+        this.procesarReporteAyerConReintentos();
       });
+
+      try {
+        await this.autenticarPortal();
+        this.logger.log('Autenticacion inicial en portal Nuxiba exitosa');
+      } catch (error) {
+        this.logger.warn(`Error en autenticacion inicial: ${error.message}`);
+      }
     } catch (error) {
       this.logger.error(`Error inicializando servicio: ${error.message}`);
     }
@@ -135,249 +192,538 @@ export class ReporteService implements OnModuleInit {
     }
   }
 
-  async probarConexionDestino() {
-    let connection: sql.ConnectionPool | null = null;
+  private async autenticarPortal(): Promise<void> {
     try {
-      connection = await sql.connect(this.getDbConfigDestino());
-      const result = await connection
-        .request()
-        .query('SELECT GETDATE() as fecha, DB_NAME() as database_name');
-      return {
-        status: 'Conectado',
-        server: process.env.DB_SERVER,
-        database: result.recordset[0].database_name,
-        fecha: result.recordset[0].fecha,
-      };
-    } catch (error) {
-      throw new Error(`Error en destino: ${error.message}`);
-    } finally {
-      if (connection) connection.close();
-    }
-  }
+      this.logger.log(`Iniciando autenticacion en portal Nuxiba`);
+      this.logger.log(`URL Base: ${this.PORTAL_BASE_URL}`);
+      this.logger.log(`Usuario: ${this.PORTAL_USER}`);
+      this.logger.log(`Contraseña: ${'*'.repeat(this.PORTAL_PASSWORD.length)}`);
 
-  async probarConexionOrigen() {
-    let connection: sql.ConnectionPool | null = null;
-    try {
-      connection = await sql.connect(this.getDbConfigOrigen());
-      const result = await connection
-        .request()
-        .query('SELECT GETDATE() as fecha, DB_NAME() as database_name');
-      return {
-        status: 'Conectado',
-        server: '192.168.8.146',
-        database: result.recordset[0].database_name,
-        fecha: result.recordset[0].fecha,
-      };
-    } catch (error) {
-      throw new Error(`Error en origen: ${error.message}`);
-    } finally {
-      if (connection) connection.close();
-    }
-  }
+      const loginUrl = `${this.PORTAL_BASE_URL}/`;
+      this.logger.log(`Obteniendo pagina de login: ${loginUrl}`);
 
-  async probarTablaOrigen() {
-    let connection: sql.ConnectionPool | null = null;
-    try {
-      connection = await sql.connect(this.getDbConfigOrigen());
-      const result = await connection
-        .request()
-        .query(`SELECT TOP 5 * FROM RepInCallsDetail`);
-      return {
-        exitoso: true,
-        registros: result.recordset.length,
-        muestra: result.recordset.slice(0, 2),
-      };
-    } catch (error) {
-      return {
-        exitoso: false,
-        error: error.message,
-        sugerencia: 'La tabla RepInCallsDetail no existe o no se puede acceder',
-      };
-    } finally {
-      if (connection) connection.close();
-    }
-  }
+      const loginPageResponse = await fetch(loginUrl, {
+        method: 'GET',
+        headers: {
+          'User-Agent':
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          Accept:
+            'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+          'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8',
+          'Cache-Control': 'no-cache',
+          Pragma: 'no-cache',
+        },
+      });
 
-  async diagnosticarSQL(fechaStr: string) {
-    let connectionOrigen: sql.ConnectionPool | null = null;
-
-    try {
-      const [dd, mm, yyyy] = fechaStr.split('-');
-      const fechaInicio = `${yyyy}-${mm}-${dd} 08:00:00`;
-      const fechaFin = `${yyyy}-${mm}-${dd} 21:00:00`;
-
-      this.logger.log(`=== INICIANDO DIAGNÓSTICO SQL ===`);
-      this.logger.log(`Fecha analizada: ${fechaStr}`);
-      this.logger.log(`Rango: ${fechaInicio} a ${fechaFin}`);
-
-      connectionOrigen = await sql.connect(this.getDbConfigOrigen());
-
-      const result1 = await connectionOrigen
-        .request()
-        .input('fechaInicio', sql.VarChar, fechaInicio)
-        .input('fechaFin', sql.VarChar, fechaFin).query(`
-          SELECT COUNT(*) as total
-          FROM RepInCallsDetail
-          WHERE date >= @fechaInicio AND date <= @fechaFin
-        `);
-
-      const result2 = await connectionOrigen
-        .request()
-        .input('fechaInicio', sql.VarChar, fechaInicio)
-        .input('fechaFin', sql.VarChar, fechaFin).query(`
-          SELECT COUNT(*) as total
-          FROM RepInCallsDetail
-          WHERE date >= @fechaInicio AND date <= @fechaFin
-            AND callStatus NOT IN ('Fuera de Horario', 'Inicial')
-        `);
-
-      const result3 = await connectionOrigen
-        .request()
-        .input('fechaInicio', sql.VarChar, fechaInicio)
-        .input('fechaFin', sql.VarChar, fechaFin).query(`
-          SELECT COUNT(*) as total
-          FROM RepInCallsDetail
-          WHERE date >= @fechaInicio AND date <= @fechaFin
-            AND callStatus NOT IN ('Fuera de Horario', 'Inicial')
-            AND ACDGroup <> 'Prueba IN'
-        `);
-
-      const result4 = await connectionOrigen
-        .request()
-        .input('fechaInicio', sql.VarChar, fechaInicio)
-        .input('fechaFin', sql.VarChar, fechaFin).query(`
-          SELECT COUNT(*) as total
-          FROM RepInCallsDetail
-          WHERE date >= @fechaInicio AND date <= @fechaFin
-            AND callStatus NOT IN ('Fuera de Horario', 'Inicial')
-            AND ACDGroup <> 'Prueba IN'
-            AND ISNULL(dnis, '') <> ''
-        `);
-
-      const result5 = await connectionOrigen
-        .request()
-        .input('fechaInicio', sql.VarChar, fechaInicio)
-        .input('fechaFin', sql.VarChar, fechaFin).query(`
-          SELECT COUNT(*) as total
-          FROM RepInCallsDetail
-          WHERE date >= @fechaInicio AND date <= @fechaFin
-            AND callStatus NOT IN ('Fuera de Horario', 'Inicial')
-            AND ACDGroup <> 'Prueba IN'
-            AND (dnis IS NULL OR dnis = '')
-        `);
-
-      this.logger.log(`=== RESULTADOS DEL DIAGNÓSTICO ===`);
       this.logger.log(
-        `1. Total en rango de fecha: ${result1.recordset[0].total}`,
-      );
-      this.logger.log(
-        `2. Excluyendo 'Fuera de Horario' e 'Inicial': ${result2.recordset[0].total} (filtrados: ${result1.recordset[0].total - result2.recordset[0].total})`,
-      );
-      this.logger.log(
-        `3. Excluyendo también 'Prueba IN': ${result3.recordset[0].total} (filtrados: ${result2.recordset[0].total - result3.recordset[0].total})`,
-      );
-      this.logger.log(
-        `4. Con todos los filtros (dnis no nulo): ${result4.recordset[0].total} (filtrados por dnis: ${result3.recordset[0].total - result4.recordset[0].total})`,
-      );
-      this.logger.log(
-        `5. Registros excluidos por dnis nulo/vacío: ${result5.recordset[0].total}`,
+        `Status de respuesta: ${loginPageResponse.status} ${loginPageResponse.statusText}`,
       );
 
-      this.logger.log(`=== RESUMEN ===`);
-      this.logger.log(
-        `Registros que obtendrá el código: ${result4.recordset[0].total}`,
-      );
-
-      if (result4.recordset[0].total !== 325) {
-        this.logger.warn(
-          `⚠️ DIFERENCIA DETECTADA: ${Math.abs(result4.recordset[0].total - 325)} registros de diferencia`,
+      if (!loginPageResponse.ok) {
+        throw new Error(
+          `Error al obtener pagina de login: ${loginPageResponse.status} - ${loginPageResponse.statusText}`,
         );
-
-        const muestraExcluidos = await connectionOrigen
-          .request()
-          .input('fechaInicio', sql.VarChar, fechaInicio)
-          .input('fechaFin', sql.VarChar, fechaFin).query(`
-            SELECT TOP 5 
-              date,
-              callStatus,
-              ACDGroup,
-              dnis,
-              callid
-            FROM RepInCallsDetail
-            WHERE date >= @fechaInicio AND date <= @fechaFin
-              AND callStatus NOT IN ('Fuera de Horario', 'Inicial')
-              AND ACDGroup <> 'Prueba IN'
-              AND (dnis IS NULL OR dnis = '')
-          `);
-
-        if (muestraExcluidos.recordset.length > 0) {
-          this.logger.log(
-            `--- Ejemplo de registros excluidos por dnis nulo/vacío ---`,
-          );
-          muestraExcluidos.recordset.forEach((row, idx) => {
-            this.logger.log(
-              `${idx + 1}. Fecha: ${row.date}, Status: ${row.callStatus}, ACDGroup: ${row.ACDGroup}, dnis: "${row.dnis}", callid: ${row.callid}`,
-            );
-          });
-        }
-      } else {
-        this.logger.log(`✅ Los registros coinciden con lo esperado`);
       }
 
-      return {
-        fecha: fechaStr,
-        rango: { inicio: fechaInicio, fin: fechaFin },
-        diagnosticos: {
-          totalRango: result1.recordset[0].total,
-          excluyendoStatus: result2.recordset[0].total,
-          excluyendoPruebaIN: result3.recordset[0].total,
-          conTodosFiltros: result4.recordset[0].total,
-          excluidosPorDnis: result5.recordset[0].total,
+      const loginHtml = await loginPageResponse.text();
+      let csrfToken: string | null = null;
+
+      const tokenMatchStandard = loginHtml.match(
+        /name="__RequestVerificationToken" value="([^"]+)"/,
+      );
+      if (tokenMatchStandard) {
+        csrfToken = tokenMatchStandard[1];
+        this.logger.log('Token CSRF encontrado (formato estandar)');
+      }
+
+      if (!csrfToken) {
+        const tokenMatchSingle = loginHtml.match(
+          /name=['"]__RequestVerificationToken['"] value=['"]([^'"]+)['"]/,
+        );
+        if (tokenMatchSingle) {
+          csrfToken = tokenMatchSingle[1];
+          this.logger.log('Token CSRF encontrado (formato comillas simples)');
+        }
+      }
+
+      if (!csrfToken) {
+        const formMatch = loginHtml.match(/<form[^>]*>([\s\S]*?)<\/form>/i);
+        if (formMatch) {
+          const formContent = formMatch[1];
+          const hiddenMatch = formContent.match(
+            /<input[^>]*name=["']__RequestVerificationToken["'][^>]*value=["']([^"']+)["']/i,
+          );
+          if (hiddenMatch) {
+            csrfToken = hiddenMatch[1];
+            this.logger.log('Token CSRF encontrado (dentro del formulario)');
+          }
+        }
+      }
+
+      if (!csrfToken) {
+        this.logger.warn(
+          'No se pudo encontrar token CSRF, intentando login sin token...',
+        );
+        csrfToken = '';
+      } else {
+        this.logger.log(
+          `Token CSRF obtenido: ${csrfToken.substring(0, 15)}...`,
+        );
+      }
+
+      const cookies = loginPageResponse.headers.get('set-cookie');
+      if (cookies) {
+        this.sessionCookies = cookies.split(';')[0];
+        this.logger.log(`Cookies iniciales obtenidas`);
+      }
+
+      this.logger.log('Enviando credenciales al portal...');
+
+      const loginData = new URLSearchParams({
+        Username: this.PORTAL_USER,
+        Password: this.PORTAL_PASSWORD,
+        ReturnUrl: '',
+        ...(csrfToken && { __RequestVerificationToken: csrfToken }),
+      });
+
+      const loginResponse = await fetch(`${this.PORTAL_BASE_URL}/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          Cookie: this.sessionCookies,
+          'User-Agent':
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          Accept:
+            'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+          'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8',
+          'Cache-Control': 'no-cache',
+          Pragma: 'no-cache',
         },
-        diferencia: result4.recordset[0].total - 325,
-        coincide: result4.recordset[0].total === 325,
-      };
+        body: loginData.toString(),
+        redirect: 'manual',
+      });
+
+      this.logger.log(`Status de login: ${loginResponse.status}`);
+
+      if (loginResponse.status === 302) {
+        const location = loginResponse.headers.get('location');
+        this.logger.log(`Redireccion recibida: ${location}`);
+
+        if (location) {
+          const newCookies = loginResponse.headers.get('set-cookie');
+          if (newCookies) {
+            this.sessionCookies = newCookies.split(';')[0];
+            this.logger.log(`Cookies actualizadas`);
+          }
+
+          await fetch(`${this.PORTAL_BASE_URL}${location}`, {
+            method: 'GET',
+            headers: {
+              Cookie: this.sessionCookies,
+              'User-Agent':
+                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            },
+          });
+
+          this.logger.log(`Autenticacion exitosa en portal Nuxiba`);
+          return;
+        }
+      }
+
+      const responseText = await loginResponse.text();
+
+      if (
+        responseText.includes('Portal Reportes Nuxiba') &&
+        responseText.includes('Admin Cliente')
+      ) {
+        this.logger.log('Autenticacion exitosa - Dashboard detectado');
+        const newCookies = loginResponse.headers.get('set-cookie');
+        if (newCookies) {
+          this.sessionCookies = newCookies.split(';')[0];
+        }
+        return;
+      }
+
+      if (
+        responseText.includes('Iniciar sesión') ||
+        responseText.includes('Usuario o contraseña incorrectos')
+      ) {
+        this.logger.error('Credenciales invalidas');
+        throw new Error('Credenciales invalidas');
+      }
+
+      this.logger.log(`Autenticacion exitosa`);
     } catch (error) {
-      this.logger.error(`Error en diagnóstico: ${error.message}`);
-      return null;
-    } finally {
-      if (connectionOrigen) connectionOrigen.close();
+      this.logger.error(`Error en autenticacion: ${error.message}`);
+      throw new Error(`Fallo en autenticacion: ${error.message}`);
     }
   }
 
-  private async obtenerDatosExcel(fechaStr: string): Promise<any[]> {
+  private async obtenerUrlDescargaExcel(
+    fechaStr: string,
+  ): Promise<string | null> {
     try {
       const [dia, mes, año] = fechaStr.split('-');
-      const fechaArchivo = `${año}-${mes}-${dia}`;
-      const apiUrl = process.env.API_URL;
+      const nombreArchivoBuscado = `ReporteInbound_${año}-${mes}-${dia}.xls`;
 
-      if (!apiUrl) {
-        this.logger.error('API_URL no configurada en variables de entorno');
-        return [];
-      }
+      this.logger.log(`Buscando archivo: ${nombreArchivoBuscado}`);
 
-      const nombreArchivo = `ReporteInbound_${fechaArchivo}.xls`;
-      const url = `${apiUrl}/${nombreArchivo}`;
-
-      this.logger.log(`Intentando descargar: ${url}`);
-
-      const response = await fetch(url);
+      const response = await fetch(`${this.PORTAL_BASE_URL}/Home/Index`, {
+        method: 'GET',
+        headers: {
+          Cookie: this.sessionCookies,
+          'User-Agent':
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        },
+      });
 
       if (!response.ok) {
-        this.logger.error(`Error descargando archivo: ${response.status}`);
+        throw new Error(
+          `Error al obtener lista de archivos: ${response.status}`,
+        );
+      }
+
+      const html = await response.text();
+      let urlDescarga: string | null = null;
+
+      const rowRegex =
+        /<tr[^>]*class="[^"]*animate-row[^"]*"[^>]*>([\s\S]*?)<\/tr>/gi;
+      let match;
+      let filaEncontrada = false;
+
+      while ((match = rowRegex.exec(html)) !== null) {
+        const rowContent = match[1];
+
+        if (rowContent.includes(nombreArchivoBuscado)) {
+          filaEncontrada = true;
+          this.logger.log(`Fila encontrada para: ${nombreArchivoBuscado}`);
+
+          const linkRegex =
+            /<a[^>]*class="[^"]*download-btn[^"]*"[^>]*href="([^"]*)"[^>]*>/i;
+          const linkMatch = rowContent.match(linkRegex);
+
+          if (linkMatch && linkMatch[1]) {
+            urlDescarga = linkMatch[1];
+            this.logger.log(
+              `Enlace de descarga encontrado en la fila: ${urlDescarga}`,
+            );
+            break;
+          }
+        }
+      }
+
+      if (!urlDescarga) {
+        this.logger.log('Buscando enlace de descarga directamente...');
+
+        const linkRegex =
+          /<a[^>]*class="[^"]*download-btn[^"]*"[^>]*href="([^"]*)"[^>]*>[\s\S]*?([^<]+)<\/a>/gi;
+        let linkMatch;
+
+        while ((linkMatch = linkRegex.exec(html)) !== null) {
+          const href = linkMatch[1];
+          const text = linkMatch[2].trim();
+
+          if (text.includes(nombreArchivoBuscado)) {
+            urlDescarga = href;
+            this.logger.log(`Enlace encontrado por texto: ${urlDescarga}`);
+            break;
+          }
+        }
+      }
+
+      if (!urlDescarga) {
+        this.logger.log('Buscando enlace por URL codificada...');
+
+        const encodedFileName = encodeURIComponent(nombreArchivoBuscado);
+        const allLinksRegex =
+          /<a[^>]*href="([^"]*\/Reports\/Download\?fileName=[^"]*)"[^>]*>/gi;
+        let linkMatch;
+
+        while ((linkMatch = allLinksRegex.exec(html)) !== null) {
+          const href = linkMatch[1];
+          try {
+            const decoded = decodeURIComponent(href);
+            if (
+              decoded.includes(nombreArchivoBuscado) ||
+              href.includes(encodedFileName)
+            ) {
+              urlDescarga = href;
+              this.logger.log(
+                `Enlace encontrado por URL codificada: ${urlDescarga}`,
+              );
+              break;
+            }
+          } catch (e) {
+            // Continuar
+          }
+        }
+      }
+
+      if (!urlDescarga) {
+        this.logger.log(
+          `Buscando enlace que contenga la fecha ${año}-${mes}-${dia}...`,
+        );
+
+        const allLinksRegex = /<a[^>]*href="([^"]*)"[^>]*>/gi;
+        let linkMatch;
+
+        while ((linkMatch = allLinksRegex.exec(html)) !== null) {
+          const href = linkMatch[1];
+          if (href.includes(`ReporteInbound_${año}-${mes}-${dia}`)) {
+            urlDescarga = href;
+            this.logger.log(
+              `Enlace encontrado por fecha en URL: ${urlDescarga}`,
+            );
+            break;
+          }
+        }
+      }
+
+      if (urlDescarga) {
+        let urlCompleta = urlDescarga;
+
+        if (urlCompleta.startsWith('/sitioreportes/sitioreportes')) {
+          urlCompleta = urlCompleta.replace(
+            '/sitioreportes/sitioreportes',
+            '/sitioreportes',
+          );
+          this.logger.log(
+            `URL corregida (duplicado eliminado): ${urlCompleta}`,
+          );
+        }
+
+        if (!urlCompleta.startsWith('http')) {
+          urlCompleta = `${this.PORTAL_BASE_URL}${urlCompleta}`;
+        }
+
+        if (urlCompleta.includes('/sitioreportes/sitioreportes')) {
+          urlCompleta = urlCompleta.replace(
+            '/sitioreportes/sitioreportes',
+            '/sitioreportes',
+          );
+          this.logger.log(`URL absoluta corregida: ${urlCompleta}`);
+        }
+
+        this.logger.log(`URL de descarga final: ${urlCompleta}`);
+        return urlCompleta;
+      }
+
+      this.logger.error(
+        `No se encontró el archivo ${nombreArchivoBuscado} en el portal`,
+      );
+      return null;
+    } catch (error) {
+      this.logger.error(`Error buscando URL de descarga: ${error.message}`);
+      return null;
+    }
+  }
+
+  private async descargarExcelDesdePortalConReintentos(
+    fechaStr: string,
+  ): Promise<Buffer | null> {
+    let intento = 0;
+    let ultimoError: Error | null = null;
+
+    while (intento < this.MAX_REINTENTOS) {
+      intento++;
+      this.logger.log(
+        `Intento ${intento}/${this.MAX_REINTENTOS} para descargar Excel de fecha ${fechaStr}`,
+      );
+
+      try {
+        if (!this.sessionCookies) {
+          this.logger.log('No hay sesion activa, autenticando...');
+          await this.autenticarPortal();
+        }
+
+        const urlDescarga = await this.obtenerUrlDescargaExcel(fechaStr);
+        if (!urlDescarga) {
+          this.logger.warn(
+            `Intento ${intento}: No se encontró URL para fecha ${fechaStr}`,
+          );
+
+          if (intento < this.MAX_REINTENTOS) {
+            this.logger.log(
+              `Esperando ${this.INTERVALO_REINTENTO / 60000} minutos antes del siguiente intento...`,
+            );
+            await this.sleep(this.INTERVALO_REINTENTO);
+            this.sessionCookies = '';
+            continue;
+          }
+          return null;
+        }
+
+        this.logger.log(`Descargando archivo: ${urlDescarga}`);
+
+        const response = await fetch(urlDescarga, {
+          method: 'GET',
+          headers: {
+            Cookie: this.sessionCookies,
+            'User-Agent':
+              'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(
+            `Error en descarga: ${response.status} ${response.statusText}`,
+          );
+        }
+
+        const arrayBuffer = await response.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+
+        if (buffer.length === 0) {
+          this.logger.warn(
+            `Intento ${intento}: Archivo descargado vacio para fecha ${fechaStr}`,
+          );
+          if (intento < this.MAX_REINTENTOS) {
+            this.logger.log(
+              `Esperando ${this.INTERVALO_REINTENTO / 60000} minutos antes del siguiente intento...`,
+            );
+            await this.sleep(this.INTERVALO_REINTENTO);
+            continue;
+          }
+          return null;
+        }
+
+        this.logger.log(
+          `Archivo descargado correctamente en intento ${intento}: ${buffer.length} bytes`,
+        );
+        return buffer;
+      } catch (error) {
+        ultimoError = error;
+        this.logger.error(
+          `Intento ${intento}/${this.MAX_REINTENTOS} fallido: ${error.message}`,
+        );
+
+        if (error.message.includes('401') || error.message.includes('403')) {
+          this.logger.log('Reintentando autenticacion...');
+          this.sessionCookies = '';
+          try {
+            await this.autenticarPortal();
+          } catch (authError) {
+            this.logger.error(`Error en autenticacion: ${authError.message}`);
+          }
+        }
+
+        if (intento < this.MAX_REINTENTOS) {
+          this.logger.log(
+            `Esperando ${this.INTERVALO_REINTENTO / 60000} minutos antes del siguiente intento...`,
+          );
+          await this.sleep(this.INTERVALO_REINTENTO);
+        }
+      }
+    }
+
+    this.logger.error(
+      `Todos los ${this.MAX_REINTENTOS} intentos fallaron para fecha ${fechaStr}`,
+    );
+    throw new Error(
+      `Fallo al descargar Excel despues de ${this.MAX_REINTENTOS} intentos: ${ultimoError?.message}`,
+    );
+  }
+
+  private transformarDatosExcel(data: any[], fechaStr: string): any[] {
+    const datosTransformados: any[] = [];
+
+    for (const row of data) {
+      let fechaISO: string | null = null;
+      let horaSolo = '';
+      let fechaCompleta = row['Fecha'];
+
+      if (fechaCompleta) {
+        if (typeof fechaCompleta === 'string') {
+          let fechaStr = fechaCompleta;
+          if (fechaCompleta.includes(' ')) {
+            const partes = fechaCompleta.split(' ');
+            fechaStr = partes[0];
+            horaSolo = partes[1]?.substring(0, 5) || '';
+          }
+
+          const partesFecha = fechaStr.split('/');
+          if (partesFecha.length === 3) {
+            const diaExcel = partesFecha[0].padStart(2, '0');
+            const mesExcel = partesFecha[1].padStart(2, '0');
+            const añoExcel = partesFecha[2];
+            fechaISO = `${añoExcel}-${mesExcel}-${diaExcel}`;
+          }
+        } else if (typeof fechaCompleta === 'number') {
+          const fecha = new Date((fechaCompleta - 25569) * 86400 * 1000);
+          const añoUTC = fecha.getUTCFullYear();
+          const mesUTC = (fecha.getUTCMonth() + 1).toString().padStart(2, '0');
+          const diaUTC = fecha.getUTCDate().toString().padStart(2, '0');
+          fechaISO = `${añoUTC}-${mesUTC}-${diaUTC}`;
+          horaSolo = `${fecha.getUTCHours().toString().padStart(2, '0')}:${fecha.getUTCMinutes().toString().padStart(2, '0')}`;
+        } else if (fechaCompleta instanceof Date) {
+          const añoUTC = fechaCompleta.getUTCFullYear();
+          const mesUTC = (fechaCompleta.getUTCMonth() + 1)
+            .toString()
+            .padStart(2, '0');
+          const diaUTC = fechaCompleta.getUTCDate().toString().padStart(2, '0');
+          fechaISO = `${añoUTC}-${mesUTC}-${diaUTC}`;
+          horaSolo = `${fechaCompleta.getUTCHours().toString().padStart(2, '0')}:${fechaCompleta.getUTCMinutes().toString().padStart(2, '0')}`;
+        }
+      }
+
+      if (fechaISO && fechaStr) {
+        const [año, mes, dia] = fechaISO.split('-');
+        const [diaEsperado, mesEsperado, añoEsperado] = fechaStr.split('-');
+
+        if (parseInt(mes) > 12 && parseInt(dia) <= 12) {
+          this.logger.warn(
+            `Fecha invertida detectada: ${fechaISO}, corrigiendo...`,
+          );
+          fechaISO = `${año}-${dia}-${mes}`;
+        }
+
+        if (año !== añoEsperado || mes !== mesEsperado || dia !== diaEsperado) {
+          this.logger.warn(
+            `Fecha no coincide: Esperada ${añoEsperado}-${mesEsperado}-${diaEsperado}, Obtenida ${fechaISO}, forzando...`,
+          );
+          fechaISO = `${añoEsperado}-${mesEsperado}-${diaEsperado}`;
+        }
+      }
+
+      let did = this.limpiarCadena(row['DID']);
+      if (did && (did.includes(' ') || did.length > 50)) did = null;
+
+      datosTransformados.push({
+        FECHA: fechaISO,
+        HORA: horaSolo || null,
+        CAMPAÑA: this.limpiarCadena(row['Campa¤a'] || row['Campaña']),
+        ESTADO_DE_LLAMADA: this.limpiarCadena(row['Estado_llamada']),
+        ESTATUS: this.limpiarCadena(row['Status']),
+        AREA: this.limpiarCadena(row['Area']),
+        HERRAMIENTA: this.limpiarCadena(row['Med_Contacto']),
+        DID: did,
+        ORIGEN: this.limpiarCadena(row['Origen']),
+        TIEMPO: row['Tiempo_llamada']
+          ? this.limpiarCadena(String(row['Tiempo_llamada']))
+          : null,
+        ID_LLAMADA: this.limpiarCadena(row['Id_llamada']),
+        ID_GRABACION: this.limpiarCadena(
+          row['Id_grabaci¢n'] || row['Id_grabacion'],
+        ),
+        fuente: 'EXCEL_PORTAL',
+      });
+    }
+
+    return datosTransformados;
+  }
+
+  private async obtenerDatosExcelDesdePortal(fechaStr: string): Promise<any[]> {
+    try {
+      const buffer =
+        await this.descargarExcelDesdePortalConReintentos(fechaStr);
+
+      if (!buffer) {
+        this.logger.warn(
+          `No se pudo descargar el Excel para fecha ${fechaStr} despues de ${this.MAX_REINTENTOS} intentos`,
+        );
         return [];
       }
 
-      const arrayBuffer = await response.arrayBuffer();
-
-      if (!arrayBuffer || arrayBuffer.byteLength === 0) {
-        this.logger.error(`Archivo vacío para fecha ${fechaStr}`);
-        return [];
-      }
-
-      this.logger.log(`Archivo descargado: ${arrayBuffer.byteLength} bytes`);
-
-      const buffer = Buffer.from(arrayBuffer);
       const workbook = XLSX.read(buffer, {
         type: 'buffer',
         cellDates: false,
@@ -390,131 +736,23 @@ export class ReporteService implements OnModuleInit {
         raw: true,
       });
 
-      this.logger.log(`Registros leídos del Excel: ${data.length}`);
+      this.logger.log(`Registros leidos del Excel: ${data.length}`);
 
       if (data.length === 0) {
-        this.logger.warn(`El Excel está vacío para fecha ${fechaStr}`);
+        this.logger.warn(`El Excel esta vacio para fecha ${fechaStr}`);
         return [];
       }
 
-      const datosTransformados: any[] = [];
-
-      for (const row of data) {
-        let fechaISO: string | null = null;
-        let horaSolo = '';
-        let fechaCompleta = row['Fecha'];
-
-        if (fechaCompleta) {
-          if (typeof fechaCompleta === 'string') {
-            let fechaStr = fechaCompleta;
-            if (fechaCompleta.includes(' ')) {
-              const partes = fechaCompleta.split(' ');
-              fechaStr = partes[0];
-              horaSolo = partes[1]?.substring(0, 5) || '';
-            }
-
-            const partesFecha = fechaStr.split('/');
-            if (partesFecha.length === 3) {
-              const diaExcel = partesFecha[0].padStart(2, '0');
-              const mesExcel = partesFecha[1].padStart(2, '0');
-              const añoExcel = partesFecha[2];
-
-              fechaISO = `${añoExcel}-${mesExcel}-${diaExcel}`;
-
-              this.logger.debug(`Fecha convertida: ${fechaStr} -> ${fechaISO}`);
-            }
-          } else if (typeof fechaCompleta === 'number') {
-            const fecha = new Date((fechaCompleta - 25569) * 86400 * 1000);
-            const añoUTC = fecha.getUTCFullYear();
-            const mesUTC = (fecha.getUTCMonth() + 1)
-              .toString()
-              .padStart(2, '0');
-            const diaUTC = fecha.getUTCDate().toString().padStart(2, '0');
-            fechaISO = `${añoUTC}-${mesUTC}-${diaUTC}`;
-            horaSolo = `${fecha.getUTCHours().toString().padStart(2, '0')}:${fecha.getUTCMinutes().toString().padStart(2, '0')}`;
-          } else if (fechaCompleta instanceof Date) {
-            const añoUTC = fechaCompleta.getUTCFullYear();
-            const mesUTC = (fechaCompleta.getUTCMonth() + 1)
-              .toString()
-              .padStart(2, '0');
-            const diaUTC = fechaCompleta
-              .getUTCDate()
-              .toString()
-              .padStart(2, '0');
-            fechaISO = `${añoUTC}-${mesUTC}-${diaUTC}`;
-            horaSolo = `${fechaCompleta.getUTCHours().toString().padStart(2, '0')}:${fechaCompleta.getUTCMinutes().toString().padStart(2, '0')}`;
-          }
-        }
-
-        if (fechaISO && fechaStr) {
-          const [año, mes, dia] = fechaISO.split('-');
-          const fechaEsperada = fechaStr.split('-');
-          const diaEsperado = fechaEsperada[0];
-          const mesEsperado = fechaEsperada[1];
-          const añoEsperado = fechaEsperada[2];
-
-          if (parseInt(mes) > 12 && parseInt(dia) <= 12) {
-            this.logger.warn(
-              `Fecha invertida detectada: ${fechaISO}, corrigiendo...`,
-            );
-            fechaISO = `${año}-${dia}-${mes}`;
-            this.logger.warn(`Fecha corregida: ${fechaISO}`);
-          }
-
-          if (
-            año !== añoEsperado ||
-            mes !== mesEsperado ||
-            dia !== diaEsperado
-          ) {
-            this.logger.warn(
-              `Fecha no coincide con lo esperado: Esperada ${añoEsperado}-${mesEsperado}-${diaEsperado}, Obtenida ${fechaISO}`,
-            );
-            fechaISO = `${añoEsperado}-${mesEsperado}-${diaEsperado}`;
-            this.logger.warn(`Fecha forzada a: ${fechaISO}`);
-          }
-        }
-
-        let did = this.limpiarCadena(row['DID']);
-        if (did && (did.includes(' ') || did.length > 50)) did = null;
-
-        datosTransformados.push({
-          FECHA: fechaISO,
-          HORA: horaSolo || null,
-          CAMPAÑA: this.limpiarCadena(row['Campa¤a'] || row['Campaña']),
-          ESTADO_DE_LLAMADA: this.limpiarCadena(row['Estado_llamada']),
-          ESTATUS: this.limpiarCadena(row['Status']),
-          AREA: this.limpiarCadena(row['Area']),
-          HERRAMIENTA: this.limpiarCadena(row['Med_Contacto']),
-          DID: did,
-          ORIGEN: this.limpiarCadena(row['Origen']),
-          TIEMPO: row['Tiempo_llamada']
-            ? this.limpiarCadena(String(row['Tiempo_llamada']))
-            : null,
-          ID_LLAMADA: this.limpiarCadena(row['Id_llamada']),
-          ID_GRABACION: this.limpiarCadena(
-            row['Id_grabaci¢n'] || row['Id_grabacion'],
-          ),
-          fuente: 'EXCEL',
-        });
-      }
-
-      if (datosTransformados.length > 0) {
-        this.logger.log(`Ejemplo de fecha convertida (primer registro):`);
-        this.logger.log(`  Fecha original en Excel: ${data[0]['Fecha']}`);
-        this.logger.log(`  Fecha convertida: ${datosTransformados[0].FECHA}`);
-        this.logger.log(`  Hora: ${datosTransformados[0].HORA}`);
-      }
+      const datosTransformados = this.transformarDatosExcel(data, fechaStr);
 
       this.logger.log(
         `Registros transformados del Excel: ${datosTransformados.length}`,
       );
-
       return datosTransformados;
     } catch (error) {
       this.logger.error(
-        `Error en obtenerDatosExcel para fecha ${fechaStr}: ${error.message}`,
+        `Error en obtenerDatosExcelDesdePortal: ${error.message}`,
       );
-      this.logger.error(error.stack);
       return [];
     }
   }
@@ -638,11 +876,8 @@ export class ReporteService implements OnModuleInit {
   ): any[] {
     const mapa = new Map();
     const registrosSinID: any[] = [];
-    const duplicadosEnExcel: any[] = [];
-    const duplicadosEnSQL: any[] = [];
-    const duplicadosEntreFuentes: any[] = [];
 
-    this.logger.log(`=== INICIANDO DEDUPLICACIÓN (SOLO POR ID_LLAMADA) ===`);
+    this.logger.log(`Iniciando deduplicacion`);
     this.logger.log(`Registros Excel: ${datosExcel.length}`);
     this.logger.log(`Registros SQL: ${datosSQL.length}`);
 
@@ -651,18 +886,8 @@ export class ReporteService implements OnModuleInit {
         registrosSinID.push(dato);
         continue;
       }
-
-      const clave = dato.ID_LLAMADA;
-
-      if (mapa.has(clave)) {
-        duplicadosEnExcel.push({
-          clave,
-          registro: dato,
-          registroExistente: mapa.get(clave),
-        });
-        this.logger.warn(`[DUPLICADO EN EXCEL] ID_LLAMADA: ${clave}`);
-      } else {
-        mapa.set(clave, dato);
+      if (!mapa.has(dato.ID_LLAMADA)) {
+        mapa.set(dato.ID_LLAMADA, dato);
       }
     }
 
@@ -671,112 +896,13 @@ export class ReporteService implements OnModuleInit {
         registrosSinID.push(dato);
         continue;
       }
-
-      const clave = dato.ID_LLAMADA;
-
-      if (mapa.has(clave)) {
-        duplicadosEntreFuentes.push({
-          clave,
-          registroSQL: dato,
-          registroExistente: mapa.get(clave),
-        });
-        this.logger.warn(
-          `[DUPLICADO ENTRE FUENTES] ID_LLAMADA: ${clave} - Prevalece registro de ${mapa.get(clave).fuente || 'Excel'}`,
-        );
-      } else {
-        mapa.set(clave, dato);
+      if (!mapa.has(dato.ID_LLAMADA)) {
+        mapa.set(dato.ID_LLAMADA, dato);
       }
     }
 
-    if (registrosSinID.length > 0) {
-      this.logger.warn(`=== REGISTROS SIN ID_LLAMADA ===`);
-      this.logger.warn(
-        `Total registros sin ID_LLAMADA: ${registrosSinID.length}`,
-      );
-      this.logger.warn(
-        `Estos registros NO serán deduplicados y se insertarán todos`,
-      );
-
-      this.logger.log(
-        `--- Ejemplos de registros sin ID_LLAMADA (primeros 3) ---`,
-      );
-      registrosSinID.slice(0, 3).forEach((reg, idx) => {
-        this.logger.log(
-          `${idx + 1}. FECHA: ${reg.FECHA}, HORA: ${reg.HORA}, CAMPAÑA: ${reg.CAMPAÑA}, DID: ${reg.DID}`,
-        );
-      });
-    }
-
-    this.logger.log(`=== RESUMEN DE DUPLICADOS POR ID_LLAMADA ===`);
-    this.logger.log(`Duplicados dentro de Excel: ${duplicadosEnExcel.length}`);
-    this.logger.log(`Duplicados dentro de SQL: ${duplicadosEnSQL.length}`);
-    this.logger.log(
-      `Duplicados entre Excel y SQL: ${duplicadosEntreFuentes.length}`,
-    );
-
-    const totalDuplicados =
-      duplicadosEnExcel.length +
-      duplicadosEnSQL.length +
-      duplicadosEntreFuentes.length;
-    this.logger.log(`Total duplicados eliminados: ${totalDuplicados}`);
-
-    if (duplicadosEnExcel.length > 0) {
-      this.logger.log(`--- Ejemplos duplicados en Excel (primeros 3) ---`);
-      duplicadosEnExcel.slice(0, 3).forEach((dup, idx) => {
-        this.logger.log(`${idx + 1}. ID_LLAMADA: ${dup.clave}`);
-        this.logger.log(
-          `   FECHA/HORA: ${dup.registro.FECHA} ${dup.registro.HORA}`,
-        );
-        this.logger.log(`   CAMPAÑA: ${dup.registro.CAMPAÑA}`);
-      });
-    }
-
-    if (duplicadosEntreFuentes.length > 0) {
-      this.logger.log(
-        `--- Ejemplos duplicados entre Excel y SQL (primeros 3) ---`,
-      );
-      duplicadosEntreFuentes.slice(0, 3).forEach((dup, idx) => {
-        this.logger.log(`${idx + 1}. ID_LLAMADA: ${dup.clave}`);
-        this.logger.log(
-          `   Excel - FECHA/HORA: ${dup.registroExistente.FECHA} ${dup.registroExistente.HORA}`,
-        );
-        this.logger.log(
-          `   SQL - FECHA/HORA: ${dup.registroSQL.FECHA} ${dup.registroSQL.HORA}`,
-        );
-        this.logger.log(
-          `   Prevalece: REGISTRO DE ${dup.registroExistente.fuente || 'Excel'}`,
-        );
-      });
-    }
-
-    const registrosConID = mapa.size;
-    const totalRegistrosFinales = registrosConID + registrosSinID.length;
-
-    this.logger.log(`=== ESTADÍSTICAS FINALES ===`);
-    this.logger.log(`Registros con ID_LLAMADA únicos: ${registrosConID}`);
-    this.logger.log(
-      `Registros sin ID_LLAMADA (todos insertados): ${registrosSinID.length}`,
-    );
-    this.logger.log(`Total registros a insertar: ${totalRegistrosFinales}`);
-
-    if (datosExcel.length + datosSQL.length > 0) {
-      const tasaDuplicacion =
-        (totalDuplicados / (datosExcel.length + datosSQL.length)) * 100;
-      this.logger.log(`Tasa de duplicación: ${tasaDuplicacion.toFixed(2)}%`);
-    }
-
-    if (registrosSinID.length > 0) {
-      this.logger.log(`=== IMPORTANTE ===`);
-      this.logger.log(
-        `Los registros sin ID_LLAMADA NO se comparan para evitar duplicados`,
-      );
-      this.logger.log(
-        `Si hay registros repetidos sin ID, se insertarán todos (posibles duplicados reales)`,
-      );
-    }
-
     const resultado = [...Array.from(mapa.values()), ...registrosSinID];
-
+    this.logger.log(`Total registros a insertar: ${resultado.length}`);
     return resultado;
   }
 
@@ -825,11 +951,6 @@ export class ReporteService implements OnModuleInit {
         } catch (err) {
           errores++;
           this.logger.error(`Error insertando registro: ${err.message}`);
-          if (err.message.includes('date')) {
-            this.logger.error(
-              `Datos problemáticos - FECHA: ${row.FECHA}, HORA: ${row.HORA}, ID: ${row.ID_LLAMADA}`,
-            );
-          }
         }
       }
 
@@ -851,33 +972,33 @@ export class ReporteService implements OnModuleInit {
   }
 
   async procesarAmbasFuentesCombinadas(fechaStr: string) {
-    this.logger.log(`Procesando fecha: ${fechaStr}`);
+    this.logger.log(`Procesando reporte para fecha: ${fechaStr}`);
 
     try {
-      await this.diagnosticarSQL(fechaStr);
-
-      const datosExcel = await this.obtenerDatosExcel(fechaStr);
+      const datosExcel = await this.obtenerDatosExcelDesdePortal(fechaStr);
       const datosSQL = await this.obtenerDatosSQL(fechaStr);
+
+      this.logger.log(`Excel: ${datosExcel.length} registros`);
+      this.logger.log(`SQL: ${datosSQL.length} registros`);
+
       const datosCombinados = this.combinarYLimpiarDuplicados(
         datosExcel,
         datosSQL,
       );
       const duplicadosEliminados =
         datosExcel.length + datosSQL.length - datosCombinados.length;
+
+      this.logger.log(`Duplicados eliminados: ${duplicadosEliminados}`);
+      this.logger.log(`Total a insertar: ${datosCombinados.length}`);
+
       const resultadoInsercion = await this.insertarDatosEnTabla(
         datosCombinados,
         fechaStr,
       );
 
-      if (resultadoInsercion.errores === 0) {
-        this.logger.log(
-          `Procesamiento exitoso: ${resultadoInsercion.insertados} registros insertados`,
-        );
-      } else {
-        this.logger.error(
-          `Procesamiento con errores: ${resultadoInsercion.insertados} insertados, ${resultadoInsercion.errores} errores`,
-        );
-      }
+      this.logger.log(`Procesamiento completado`);
+      this.logger.log(`Insertados: ${resultadoInsercion.insertados}`);
+      this.logger.log(`Errores: ${resultadoInsercion.errores}`);
 
       return {
         fecha: fechaStr,
@@ -903,16 +1024,120 @@ export class ReporteService implements OnModuleInit {
     }
   }
 
-  async procesarReporteAyer() {
+  async procesarReporteAyerConReintentos() {
     const hoy = new Date();
     const ayer = new Date(hoy);
     ayer.setDate(hoy.getDate() - 1);
     const fechaStr = `${String(ayer.getDate()).padStart(2, '0')}-${String(ayer.getMonth() + 1).padStart(2, '0')}-${ayer.getFullYear()}`;
-    return this.procesarAmbasFuentesCombinadas(fechaStr);
+
+    let intento = 0;
+    let ultimoError: Error | null = null;
+
+    this.logger.log(
+      `Iniciando procesamiento de reporte para fecha ${fechaStr} con ${this.MAX_REINTENTOS} reintentos`,
+    );
+
+    while (intento < this.MAX_REINTENTOS) {
+      intento++;
+      this.logger.log(
+        `Intento ${intento}/${this.MAX_REINTENTOS} para fecha ${fechaStr}`,
+      );
+
+      try {
+        const resultado = await this.procesarAmbasFuentesCombinadas(fechaStr);
+        if (resultado.exitoso) {
+          this.logger.log(
+            `Procesamiento exitoso en intento ${intento} para fecha ${fechaStr}`,
+          );
+          return resultado;
+        }
+        throw new Error(`Procesamiento fallido: ${JSON.stringify(resultado)}`);
+      } catch (error) {
+        ultimoError = error;
+        this.logger.error(
+          `Intento ${intento}/${this.MAX_REINTENTOS} fallido: ${error.message}`,
+        );
+
+        if (intento < this.MAX_REINTENTOS) {
+          this.logger.log(
+            `Esperando ${this.INTERVALO_REINTENTO / 60000} minutos antes del siguiente intento...`,
+          );
+          await this.sleep(this.INTERVALO_REINTENTO);
+
+          // Renovar sesión en cada reintento
+          try {
+            await this.autenticarPortal();
+            this.logger.log('Sesion renovada para reintento');
+          } catch (authError) {
+            this.logger.warn(`Error renovando sesion: ${authError.message}`);
+          }
+        }
+      }
+    }
+
+    this.logger.error(
+      `Todos los ${this.MAX_REINTENTOS} intentos fallaron para fecha ${fechaStr}`,
+    );
+    throw new Error(
+      `Fallo al procesar reporte despues de ${this.MAX_REINTENTOS} intentos: ${ultimoError?.message}`,
+    );
+  }
+
+  async procesarReporteAyer() {
+    return this.procesarReporteAyerConReintentos();
   }
 
   async procesarFechaEspecifica(fechaStr: string) {
-    return this.procesarAmbasFuentesCombinadas(fechaStr);
+    let intento = 0;
+    let ultimoError: Error | null = null;
+
+    this.logger.log(
+      `Procesando fecha especifica ${fechaStr} con ${this.MAX_REINTENTOS} reintentos`,
+    );
+
+    while (intento < this.MAX_REINTENTOS) {
+      intento++;
+      this.logger.log(
+        `Intento ${intento}/${this.MAX_REINTENTOS} para fecha ${fechaStr}`,
+      );
+
+      try {
+        const resultado = await this.procesarAmbasFuentesCombinadas(fechaStr);
+        if (resultado.exitoso) {
+          this.logger.log(
+            `Procesamiento exitoso en intento ${intento} para fecha ${fechaStr}`,
+          );
+          return resultado;
+        }
+        throw new Error(`Procesamiento fallido: ${JSON.stringify(resultado)}`);
+      } catch (error) {
+        ultimoError = error;
+        this.logger.error(
+          `Intento ${intento}/${this.MAX_REINTENTOS} fallido: ${error.message}`,
+        );
+
+        if (intento < this.MAX_REINTENTOS) {
+          this.logger.log(
+            `Esperando ${this.INTERVALO_REINTENTO / 60000} minutos antes del siguiente intento...`,
+          );
+          await this.sleep(this.INTERVALO_REINTENTO);
+
+          try {
+            await this.autenticarPortal();
+            this.logger.log('Sesion renovada para reintento');
+          } catch (authError) {
+            this.logger.warn(`Error renovando sesion: ${authError.message}`);
+          }
+        }
+      }
+    }
+
+    this.logger.error(
+      `Todos los ${this.MAX_REINTENTOS} intentos fallaron para fecha ${fechaStr}`,
+    );
+    throw new Error(
+      `Fallo al procesar fecha especifica despues de ${this.MAX_REINTENTOS} intentos: ${ultimoError?.message}`,
+    );
   }
 
   async corregirTextos(fechaStr: string) {
@@ -920,12 +1145,12 @@ export class ReporteService implements OnModuleInit {
   }
 
   async procesarReporteExcel(fechaStr: string) {
-    const datos = await this.obtenerDatosExcel(fechaStr);
+    const datos = await this.obtenerDatosExcelDesdePortal(fechaStr);
     const resultado = await this.insertarDatosEnTabla(datos, fechaStr);
     return {
       insertados: resultado.insertados,
       errores: resultado.errores,
-      mensaje: 'Excel procesado',
+      mensaje: 'Excel procesado desde portal',
     };
   }
 
@@ -939,7 +1164,220 @@ export class ReporteService implements OnModuleInit {
     };
   }
 
-  async procesarAmbasFuentes(fechaStr: string) {
-    return this.procesarAmbasFuentesCombinadas(fechaStr);
+  async probarConexionDestino() {
+    let connection: sql.ConnectionPool | null = null;
+    try {
+      connection = await sql.connect(this.getDbConfigDestino());
+      const result = await connection
+        .request()
+        .query('SELECT GETDATE() as fecha, DB_NAME() as database_name');
+      return {
+        status: 'Conectado',
+        server: process.env.DB_SERVER,
+        database: result.recordset[0].database_name,
+        fecha: result.recordset[0].fecha,
+      };
+    } catch (error) {
+      throw new Error(`Error en destino: ${error.message}`);
+    } finally {
+      if (connection) connection.close();
+    }
+  }
+
+  async probarConexionOrigen() {
+    let connection: sql.ConnectionPool | null = null;
+    try {
+      connection = await sql.connect(this.getDbConfigOrigen());
+      const result = await connection
+        .request()
+        .query('SELECT GETDATE() as fecha, DB_NAME() as database_name');
+      return {
+        status: 'Conectado',
+        server: '192.168.8.146',
+        database: result.recordset[0].database_name,
+        fecha: result.recordset[0].fecha,
+      };
+    } catch (error) {
+      throw new Error(`Error en origen: ${error.message}`);
+    } finally {
+      if (connection) connection.close();
+    }
+  }
+
+  async probarTablaOrigen() {
+    let connection: sql.ConnectionPool | null = null;
+    try {
+      connection = await sql.connect(this.getDbConfigOrigen());
+      const result = await connection
+        .request()
+        .query(`SELECT TOP 5 * FROM RepInCallsDetail`);
+      return {
+        exitoso: true,
+        registros: result.recordset.length,
+        muestra: result.recordset.slice(0, 2),
+      };
+    } catch (error) {
+      return {
+        exitoso: false,
+        error: error.message,
+        sugerencia: 'La tabla RepInCallsDetail no existe o no se puede acceder',
+      };
+    } finally {
+      if (connection) connection.close();
+    }
+  }
+
+  async diagnosticarSQL(fechaStr: string) {
+    let connectionOrigen: sql.ConnectionPool | null = null;
+
+    try {
+      const [dd, mm, yyyy] = fechaStr.split('-');
+      const fechaInicio = `${yyyy}-${mm}-${dd} 08:00:00`;
+      const fechaFin = `${yyyy}-${mm}-${dd} 21:00:00`;
+
+      connectionOrigen = await sql.connect(this.getDbConfigOrigen());
+
+      const result = await connectionOrigen
+        .request()
+        .input('fechaInicio', sql.VarChar, fechaInicio)
+        .input('fechaFin', sql.VarChar, fechaFin).query(`
+          SELECT COUNT(*) as total
+          FROM RepInCallsDetail
+          WHERE date >= @fechaInicio AND date <= @fechaFin
+            AND callStatus NOT IN ('Fuera de Horario', 'Inicial')
+            AND ACDGroup <> 'Prueba IN'
+            AND ISNULL(dnis, '') <> ''
+        `);
+
+      return {
+        fecha: fechaStr,
+        totalRegistros: result.recordset[0].total,
+      };
+    } catch (error) {
+      this.logger.error(`Error en diagnostico: ${error.message}`);
+      return null;
+    } finally {
+      if (connectionOrigen) connectionOrigen.close();
+    }
+  }
+
+  async probarAutenticacionPortal() {
+    try {
+      await this.autenticarPortal();
+      return {
+        success: true,
+        message: 'Autenticacion exitosa en portal Nuxiba',
+        cookies: this.sessionCookies ? 'Cookies obtenidas' : 'Sin cookies',
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: `Error en autenticacion: ${error.message}`,
+      };
+    }
+  }
+
+  async probarDescargaExcel(fechaStr: string) {
+    try {
+      const buffer =
+        await this.descargarExcelDesdePortalConReintentos(fechaStr);
+      if (buffer) {
+        return {
+          success: true,
+          message: `Excel descargado correctamente: ${buffer.length} bytes`,
+          size: buffer.length,
+        };
+      } else {
+        return {
+          success: false,
+          message: `No se pudo descargar el Excel para fecha ${fechaStr} despues de ${this.MAX_REINTENTOS} intentos`,
+        };
+      }
+    } catch (error) {
+      return {
+        success: false,
+        message: `Error en descarga: ${error.message}`,
+      };
+    }
+  }
+
+  async listarArchivosDisponibles(): Promise<any> {
+    try {
+      if (!this.sessionCookies) {
+        await this.autenticarPortal();
+      }
+
+      const response = await fetch(`${this.PORTAL_BASE_URL}/Home/Index`, {
+        method: 'GET',
+        headers: {
+          Cookie: this.sessionCookies,
+          'User-Agent':
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        },
+      });
+
+      const html = await response.text();
+      const archivos: { nombre: string; fecha: string; url: string }[] = [];
+
+      const rowRegex =
+        /<tr[^>]*class="[^"]*animate-row[^"]*"[^>]*>([\s\S]*?)<\/tr>/g;
+      let match;
+
+      while ((match = rowRegex.exec(html)) !== null) {
+        const rowContent = match[1];
+
+        const nameMatch = rowContent.match(
+          /<span[^>]*class="[^"]*file-name[^"]*"[^>]*>([^<]+)<\/span>/i,
+        );
+        const fileName = nameMatch ? nameMatch[1].trim() : null;
+
+        const linkMatch = rowContent.match(
+          /<a[^>]*class="[^"]*download-btn[^"]*"[^>]*href="([^"]*)"[^>]*>/i,
+        );
+        let url = linkMatch ? linkMatch[1] : null;
+
+        if (fileName && fileName.startsWith('ReporteInbound_')) {
+          if (url) {
+            if (url.startsWith('/sitioreportes/sitioreportes')) {
+              url = url.replace(
+                '/sitioreportes/sitioreportes',
+                '/sitioreportes',
+              );
+            }
+            url = url.startsWith('http')
+              ? url
+              : `${this.PORTAL_BASE_URL}${url}`;
+            if (url.includes('/sitioreportes/sitioreportes')) {
+              url = url.replace(
+                '/sitioreportes/sitioreportes',
+                '/sitioreportes',
+              );
+            }
+          }
+
+          const fechaMatch = fileName.match(
+            /ReporteInbound_(\d{4}-\d{2}-\d{2})\.xls/,
+          );
+          archivos.push({
+            nombre: fileName,
+            fecha: fechaMatch ? fechaMatch[1] : 'desconocida',
+            url: url || 'no disponible',
+          });
+        }
+      }
+
+      return {
+        success: true,
+        total: archivos.length,
+        archivos: archivos.slice(0, 20),
+        ultimos: archivos.slice(-10),
+        todosLosNombres: archivos.map((a) => a.nombre),
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
   }
 }

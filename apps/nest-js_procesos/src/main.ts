@@ -54,12 +54,16 @@ async function bootstrap() {
   console.log('   GET  /envio-inbound/probar/:fecha');
   console.log('   GET  /envio-inbound/probar-ayer');
 
-  console.log('\nCOMBINAR REPORTE SQL/EXCEL:');
+  console.log('\nREPORTE INBOUND (SQL/EXCEL):');
   console.log('   GET /api/reporte/completo/:fecha');
   console.log('   GET /api/reporte/excel/:fecha');
   console.log('   GET /api/reporte/sql/:fecha');
   console.log('   GET /api/reporte/corregir/:fecha');
   console.log('   GET /api/reporte');
+  console.log('   GET /api/reporte/diagnostico/conexiones');
+  console.log('   GET /api/reporte/diagnostico/portal');
+  console.log('   GET /api/reporte/diagnostico/descarga/:fecha');
+  console.log('   GET /api/reporte/diagnostico/archivos');
 
   /*
   console.log('\nGENERADOR IVR REMINDER:');

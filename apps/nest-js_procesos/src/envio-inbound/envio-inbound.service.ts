@@ -168,10 +168,10 @@ export class EnvioInboundService {
     return isNaN(parsed) ? 0 : parsed;
   }
 
-private generarTextoPlanoReporte(fechaStr: string): string {
-  const fechaFormateada = fechaStr.split('-').reverse().join('/');
+  private generarTextoPlanoReporte(fechaStr: string): string {
+    const fechaFormateada = fechaStr.split('-').reverse().join('/');
 
-  return `Generacion de reporte automatico
+    return `Generacion de reporte automatico
 
 Periodo: ${fechaFormateada}
 
@@ -181,12 +181,12 @@ Saludos.
 
 ---
 Reporte automatizado por Ian`;
-}
+  }
 
-private generarHtmlReporte(fechaStr: string): string {
-  const fechaFormateada = fechaStr.split('-').reverse().join('/');
+  private generarHtmlReporte(fechaStr: string): string {
+    const fechaFormateada = fechaStr.split('-').reverse().join('/');
 
-  return `
+    return `
   <!DOCTYPE html>
   <html>
   <head>
@@ -251,7 +251,7 @@ private generarHtmlReporte(fechaStr: string): string {
   </body>
   </html>
 `;
-}
+  }
 
   private async enviarCorreo(
     zipBuffer: Buffer,
