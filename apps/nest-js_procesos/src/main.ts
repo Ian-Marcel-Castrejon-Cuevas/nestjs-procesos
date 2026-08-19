@@ -97,6 +97,9 @@ async function bootstrap() {
   console.log('\nSTATUS (Cambio de estado):');
   console.log('   POST /status/cambiar');
 
+  console.log('\nDEVOLUCIONES (Procesamiento de devoluciones):');
+  console.log('   POST /devoluciones/procesar');
+
   console.log('\n' + '='.repeat(60));
 }
 bootstrap();

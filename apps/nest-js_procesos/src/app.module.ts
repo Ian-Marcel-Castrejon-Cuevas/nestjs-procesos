@@ -10,6 +10,7 @@ import { VerificacionModule } from './verificacion/verificacion.module';
 import { PhishingModule } from './phishing/phishing.module';
 import { LeyendasModule } from './leyendas/leyendas.module';
 import { StatusModule } from './status/status.module';
+import { DevolucionesModule } from './devoluciones/devoluciones.module';
 
 @Module({
   imports: [
@@ -43,6 +44,7 @@ import { StatusModule } from './status/status.module';
     PhishingModule,
     LeyendasModule,
     StatusModule,
+    DevolucionesModule,
   ],
 })
 /**
