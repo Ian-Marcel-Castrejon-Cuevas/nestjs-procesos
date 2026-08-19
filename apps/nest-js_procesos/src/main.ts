@@ -94,6 +94,9 @@ async function bootstrap() {
   console.log('   POST /leyendas/procesar (multipart/form-data)');
   console.log('        - file: archivo Excel');
 
+  console.log('\nSTATUS (Cambio de estado):');
+  console.log('   POST /status/cambiar');
+
   console.log('\n' + '='.repeat(60));
 }
 bootstrap();
