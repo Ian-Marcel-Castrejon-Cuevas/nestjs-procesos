@@ -25,11 +25,14 @@ async function bootstrap() {
   console.log('PG_HOST:', process.env.PG_HOST);
   console.log('PG_USER:', process.env.PG_USER);
   console.log('DB_SERVER:', process.env.DB_SERVER);
+  console.log('DB_HOST2:', process.env.DB_HOST2);
+  console.log('DB_USERNAME2:', process.env.DB_USERNAME2);
   console.log('PORT:', process.env.PORT);
   console.log('SMTP_HOST:', process.env.SMTP_HOST);
   console.log('SMTP_TO:', process.env.SMTP_TO);
   console.log('CCCONE_USER:', process.env.CCCONE_USER);
   console.log('CCCONE_IMAP_USER:', process.env.CCCONE_IMAP_USER);
+  console.log('CCC_USERNAME:', process.env.CCC_USERNAME);
   console.log('=====================================');
 
   const app = await NestFactory.create(AppModule);
@@ -41,20 +44,20 @@ async function bootstrap() {
   await app.listen(port, '0.0.0.0');
 
   const ip = getLocalIP();
-  console.log(`\nServidor NestJS corriendo en http://${ip}:${port}`);
-  console.log('\nENDPOINTS DISPONIBLES:\n');
+  console.log(`\n🚀 Servidor NestJS corriendo en http://${ip}:${port}`);
+  console.log('\n📋 ENDPOINTS DISPONIBLES:\n');
 
-  console.log('VERIFICACION EDOMEX:');
+  console.log('📌 VERIFICACION EDOMEX:');
   console.log('   POST /verificacion/verificar');
   console.log('   GET  /verificacion');
 
-  console.log('\nREPORTE INBOUND:');
+  console.log('\n📌 REPORTE INBOUND:');
   console.log('   POST /envio-inbound/generar');
   console.log('   POST /envio-inbound/generar?fecha=YYYY-MM-DD');
   console.log('   GET  /envio-inbound/probar/:fecha');
   console.log('   GET  /envio-inbound/probar-ayer');
 
-  console.log('\nREPORTE INBOUND (SQL/EXCEL):');
+  console.log('\n📌 REPORTE INBOUND (SQL/EXCEL):');
   console.log('   GET /api/reporte/completo/:fecha');
   console.log('   GET /api/reporte/excel/:fecha');
   console.log('   GET /api/reporte/sql/:fecha');
@@ -65,8 +68,23 @@ async function bootstrap() {
   console.log('   GET /api/reporte/diagnostico/descarga/:fecha');
   console.log('   GET /api/reporte/diagnostico/archivos');
 
+  console.log('\n📌 CCC DOWNLOADER (Historial de llamadas):');
+  console.log('   POST /ccc-downloader/ejecutar');
+  console.log(
+    '   POST /ccc-downloader/ejecutar  Body: { "fecha": "YYYY-MM-DD" }',
+  );
+  console.log('   POST /ccc-downloader/cuenta');
+  console.log(
+    '   POST /ccc-downloader/cuenta    Body: { "customerId": "2625", "fecha": "YYYY-MM-DD" }',
+  );
+  console.log('   GET  /ccc-downloader/cuentas');
+  console.log('   GET  /ccc-downloader/fecha-ayer');
+  console.log(
+    '   ⏰ CRON: Se ejecuta automáticamente a las 2:00 AM (hora CDMX)',
+  );
+
   /*
-  console.log('\nGENERADOR IVR REMINDER:');
+  console.log('\n📌 GENERADOR IVR REMINDER:');
   console.log('   POST /api/ivr-reminder/generar-todos');
   console.log('   POST /api/ivr-reminder/generar/:tipo');
   console.log('   GET  /api/ivr-reminder/estado');
@@ -75,12 +93,12 @@ async function bootstrap() {
   */
 
   /*
-  console.log('\nGENERADOR CCC ONE REPORT:');
+  console.log('\n📌 GENERADOR CCC ONE REPORT:');
   console.log('   POST /api/ccc-one/ejecutar');
   console.log('   GET  /api/ccc-one/estado');
    */
 
-  console.log('\nPHISHING (Carven2):');
+  console.log('\n📌 PHISHING (Carven2):');
   console.log('   POST   /phishing/registrar');
   console.log('   GET    /phishing/registros');
   console.log('   GET    /phishing/ver');
@@ -90,16 +108,18 @@ async function bootstrap() {
   console.log('   GET    /phishing/export/txt');
   console.log('   GET    /phishing/export/excel');
 
-  console.log('\nLEYENDAS (Procesador de archivos):');
+  console.log('\n📌 LEYENDAS (Procesador de archivos):');
   console.log('   POST /leyendas/procesar (multipart/form-data)');
   console.log('        - file: archivo Excel');
 
-  console.log('\nSTATUS (Cambio de estado):');
+  console.log('\n📌 STATUS (Cambio de estado):');
   console.log('   POST /status/cambiar');
 
-  console.log('\nDEVOLUCIONES (Procesamiento de devoluciones):');
+  console.log('\n📌 DEVOLUCIONES (Procesamiento de devoluciones):');
   console.log('   POST /devoluciones/procesar');
 
   console.log('\n' + '='.repeat(60));
+  console.log('✅ Servidor listo para recibir peticiones');
+  console.log('='.repeat(60));
 }
 bootstrap();

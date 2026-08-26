@@ -11,6 +11,7 @@ import { PhishingModule } from './phishing/phishing.module';
 import { LeyendasModule } from './leyendas/leyendas.module';
 import { StatusModule } from './status/status.module';
 import { DevolucionesModule } from './devoluciones/devoluciones.module';
+import { CccDownloaderModule } from './ccc-downloader/ccc-downloader.module';
 
 @Module({
   imports: [
@@ -45,6 +46,7 @@ import { DevolucionesModule } from './devoluciones/devoluciones.module';
     LeyendasModule,
     StatusModule,
     DevolucionesModule,
+    CccDownloaderModule,
   ],
 })
 /**
