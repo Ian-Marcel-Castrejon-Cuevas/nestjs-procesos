@@ -303,17 +303,24 @@ export class CccDownloaderService implements OnModuleDestroy {
       // 3. Ir a Historial
       await this.irAHistorial(driver);
 
-      // 4. Esperar carga
+      // 4. Esperar a que termine la búsqueda inicial del historial
+      await this.seleniumHelper.esperarCargaHistorial();
+
+      // 5. Quitar y validar el filtro antes de consultar el rango solicitado
+      const filtroContestadaDesactivado =
+        await this.quitarFiltroContestada(driver);
+      if (!filtroContestadaDesactivado) {
+        throw new Error('No se pudo desactivar el filtro de contestada');
+      }
+
+      // 6. Aplicar fechas antes de validar los resultados
+      await this.aplicarFechas(driver, fechaStr);
+
+      // 7. Validar la carga del rango solicitado
       const cargaOK = await this.seleniumHelper.esperarCargaHistorial();
       if (!cargaOK) {
         throw new Error('No hay registros en el historial');
       }
-
-      // 5. Quitar filtro de contestada
-      await this.quitarFiltroContestada(driver);
-
-      // 6. Aplicar fechas
-      await this.aplicarFechas(driver, fechaStr);
 
       // 7. Descargar historial
       await this.descargarHistorial(driver);
@@ -344,6 +351,12 @@ export class CccDownloaderService implements OnModuleDestroy {
       // 11. Insertar en BD
       const registros = await this.csvProcessor.leerCSVProcesado(rutaCSV);
       const insertados = await this.insertarEnBaseDatos(registros);
+
+      if (registros.length > 0 && insertados === 0) {
+        throw new Error(
+          `No se pudo insertar ninguno de los ${registros.length} registros`,
+        );
+      }
 
       this.logger.log(
         `✅ Cuenta ${cuenta.nombre} procesada exitosamente - ${insertados} registros insertados`,
@@ -378,7 +391,7 @@ export class CccDownloaderService implements OnModuleDestroy {
 
     const loginUrl = this.configService.get(
       'CCC_LOGIN_URL',
-      'https://mx.ccc.uno/Login',
+      'https://app.ccc.uno/Login',
     );
     await driver.get(loginUrl);
     this.logger.log('📄 Página de login cargada');
@@ -445,7 +458,7 @@ export class CccDownloaderService implements OnModuleDestroy {
       // Si la URL no contiene CallRecord, navegar directamente
       if (!url.includes('CallRecord')) {
         this.logger.log('📊 Navegando a CallRecord...');
-        await driver.get('https://mx.ccc.uno/CallRecord');
+        await driver.get('https://app.ccc.uno/CallRecord');
         await driver.sleep(5000);
       }
 
@@ -599,7 +612,7 @@ export class CccDownloaderService implements OnModuleDestroy {
           `🔄 Intentando navegar directamente con cuenta ${customerId}...`,
         );
         await driver.get(
-          `https://mx.ccc.uno/CallRecord?customer=${customerId}`,
+          `https://app.ccc.uno/CallRecord?customer=${customerId}`,
         );
         await driver.sleep(5000);
 
@@ -612,7 +625,7 @@ export class CccDownloaderService implements OnModuleDestroy {
           !currentUrlDespues.includes(`Customer=${customerId}`)
         ) {
           await driver.get(
-            `https://mx.ccc.uno/CallRecord?Customer=${customerId}`,
+            `https://app.ccc.uno/CallRecord?Customer=${customerId}`,
           );
           await driver.sleep(3000);
         }
@@ -672,7 +685,7 @@ export class CccDownloaderService implements OnModuleDestroy {
 
     const historialUrl = this.configService.get(
       'CCC_HISTORIAL_URL',
-      'https://mx.ccc.uno/CallRecord',
+      'https://app.ccc.uno/CallRecord',
     );
     await driver.get(historialUrl);
     await driver.sleep(5000);
@@ -681,28 +694,67 @@ export class CccDownloaderService implements OnModuleDestroy {
 
   private async quitarFiltroContestada(
     driver: webdriver.ThenableWebDriver,
-  ): Promise<void> {
+  ): Promise<boolean> {
     this.logger.log('🔍 Quitando filtro de contestada...');
 
     try {
-      const checkboxes = await driver.findElements(
-        webdriver.By.xpath(
-          "//input[@type='checkbox' and contains(@data-filter, 'answered')]",
-        ),
+      const filtroSelector = webdriver.By.xpath(
+        "//input[@type='checkbox' and @data-filter='cdrstatus_answer']",
       );
+      const checkboxes = await driver.findElements(filtroSelector);
 
       for (const checkbox of checkboxes) {
         if (await checkbox.isSelected()) {
-          await this.seleniumHelper.clickElementSafe(checkbox);
+          const labels = await checkbox.findElements(
+            webdriver.By.xpath('./ancestor::label[1]'),
+          );
+          const controlFiltro = labels[0] || checkbox;
+          await this.seleniumHelper.clickElementSafe(controlFiltro);
           this.logger.log('✅ Filtro de contestada desactivado');
-          await driver.sleep(1000);
+          await driver.sleep(1500);
           await this.seleniumHelper.esperarCargaHistorial();
         }
       }
+
+      const limiteValidacion = Date.now() + 10000;
+      let desactivado = false;
+
+      while (Date.now() < limiteValidacion) {
+        const filtrosActivos = await driver.findElements(filtroSelector);
+        const estados = await Promise.all(
+          filtrosActivos.map(async (checkbox) => {
+            return driver.executeScript(
+              `
+                const checkbox = arguments[0];
+                const label = checkbox.closest('label');
+                return checkbox.checked || label?.classList.contains('active');
+              `,
+              checkbox,
+            );
+          }),
+        );
+
+        desactivado = filtrosActivos.length === 0 || !estados.some(Boolean);
+        if (desactivado) break;
+        await driver.sleep(500);
+      }
+
+      if (desactivado) {
+        this.logger.log(
+          '✅ Validación confirmada: filtro de contestada desactivado',
+        );
+      } else {
+        this.logger.warn(
+          '⚠️ Validación fallida: el filtro de contestada sigue activo',
+        );
+      }
+
+      return desactivado;
     } catch (error: any) {
       this.logger.warn(
         '⚠️ No se encontró el filtro de contestada o ya estaba desactivado',
       );
+      return false;
     }
   }
 
@@ -881,7 +933,7 @@ export class CccDownloaderService implements OnModuleDestroy {
 
     const descargasUrl = this.configService.get(
       'CCC_DESCARGAS_URL',
-      'https://mx.ccc.uno/Jobs',
+      'https://app.ccc.uno/Jobs',
     );
     await driver.get(descargasUrl);
     await driver.sleep(5000);
@@ -943,6 +995,26 @@ export class CccDownloaderService implements OnModuleDestroy {
 
             if (statusText.toUpperCase().includes('COMPLETED')) {
               this.logger.log('✅ Descarga completada!');
+
+              const enlaceDescarga = await driver.wait(
+                webdriver.until.elementLocated(
+                  webdriver.By.xpath(
+                    "//table[contains(@class, 'backgrid')]/tbody/tr[1]//a[contains(@href, '/IncrementalDownload/Download')]",
+                  ),
+                ),
+                15000,
+              );
+
+              await driver.executeScript(
+                'arguments[0].scrollIntoView({block: "center"});',
+                enlaceDescarga,
+              );
+              await driver.sleep(500);
+              const hrefDescarga = await enlaceDescarga.getAttribute('href');
+              await this.seleniumHelper.clickElementSafe(enlaceDescarga);
+              this.logger.log(
+                `⬇️ Enlace de descarga presionado: ${hrefDescarga}`,
+              );
 
               const rutaZip = await this.seleniumHelper.esperarDescargaArchivo(
                 this.rutaDescarga,
@@ -1057,7 +1129,11 @@ export class CccDownloaderService implements OnModuleDestroy {
           );
           request.input('LeadID', mssql.NVarChar, registro.LeadID);
           request.input('ListID', mssql.NVarChar, registro.ListID);
-          request.input('Hora', mssql.Time, registro.Hora);
+          request.input(
+            'Hora',
+            mssql.Time,
+            this.convertirHoraParaSql(registro.Hora),
+          );
 
           await request.query(query);
           insertados++;
@@ -1079,6 +1155,26 @@ export class CccDownloaderService implements OnModuleDestroy {
     const fechaAyer = new Date();
     fechaAyer.setDate(fechaAyer.getDate() - 1);
     return fechaAyer.toISOString().split('T')[0];
+  }
+
+  private convertirHoraParaSql(hora: string | null): Date | null {
+    if (!hora) return null;
+
+    const partes = hora.split(':').map(Number);
+    if (
+      partes.length !== 3 ||
+      partes.some((parte) => !Number.isInteger(parte)) ||
+      partes[0] < 0 ||
+      partes[0] > 23 ||
+      partes[1] < 0 ||
+      partes[1] > 59 ||
+      partes[2] < 0 ||
+      partes[2] > 59
+    ) {
+      return null;
+    }
+
+    return new Date(1970, 0, 1, partes[0], partes[1], partes[2], 0);
   }
 
   private sleep(ms: number): Promise<void> {

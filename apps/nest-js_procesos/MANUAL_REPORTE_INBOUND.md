@@ -79,6 +79,9 @@ Entidad `LlamadaInbound` mapea `Reporte_Inbound` con campos clave:
 
 - Base de datos destino:
   - `DB_USER`, `DB_PASSWORD`, `DB_SERVER`, `DB_DATABASE`, `DB_PORT`
+- Base de datos origen (opcional; si no se indican, conserva los valores históricos):
+  - `DB_ORIGEN_USER`, `DB_ORIGEN_PASSWORD`, `DB_ORIGEN_SERVER`, `DB_ORIGEN_DATABASE`, `DB_ORIGEN_PORT`
+  - `DB_ORIGEN_SCHEMA` (por defecto `dbo`), `DB_ORIGEN_TABLE` (por defecto `RepInCallsDetail`)
 - Portal Nuxiba:
   - `PORTAL_BASE_URL`, `PORTAL_USER`, `PORTAL_PASSWORD`
 - SMTP / Envío:
@@ -86,7 +89,7 @@ Entidad `LlamadaInbound` mapea `Reporte_Inbound` con campos clave:
 - Ruta de red para reportes:
   - `NETWORK_REPORTE_INB_`
 
-> Nota: en el código actual la configuración de la DB origen está hardcodeada; se recomienda externalizarla.
+> Nota: la configuración de la DB origen admite variables `DB_ORIGEN_*`. Si `RepInCallsDetail` pertenece a otra base, esquema o tabla, ajústalas antes de ejecutar el proceso.
 
 ## Cron / Programadores
 

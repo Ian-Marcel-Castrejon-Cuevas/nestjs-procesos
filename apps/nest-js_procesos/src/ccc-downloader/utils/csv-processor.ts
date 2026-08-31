@@ -158,11 +158,14 @@ export class CsvProcessor {
           }
         })
         .on('end', () => {
-          this.guardarCSVProcesado(registros, archivoDestino);
-          this.logger.log(
-            `Archivo procesado: ${path.basename(archivoDestino)}, ${registros.length} registros`,
-          );
-          resolve();
+          this.guardarCSVProcesado(registros, archivoDestino)
+            .then(() => {
+              this.logger.log(
+                `Archivo procesado: ${path.basename(archivoDestino)}, ${registros.length} registros`,
+              );
+              resolve();
+            })
+            .catch(reject);
         })
         .on('error', (error) => {
           reject(error);
@@ -230,19 +233,37 @@ export class CsvProcessor {
   private extraerHora(fechaStr: string): string | null {
     if (!fechaStr) return null;
     const match = fechaStr.match(/(\d{2}:\d{2}:\d{2})/);
-    if (match) return match[1];
+    if (match) return this.normalizarHora(match[1]);
     const match2 = fechaStr.match(/(\d{2}:\d{2})/);
-    if (match2) return `${match2[1]}:00`;
+    if (match2) return this.normalizarHora(`${match2[1]}:00`);
     return null;
+  }
+
+  private normalizarHora(hora: unknown): string | null {
+    if (typeof hora !== 'string') return null;
+
+    const valor = hora.trim();
+    const match = valor.match(/^(\d{2}):(\d{2})(?::(\d{2}))?$/);
+    if (!match) return null;
+
+    const horas = Number(match[1]);
+    const minutos = Number(match[2]);
+    const segundos = Number(match[3] || '00');
+    if (horas > 23 || minutos > 59 || segundos > 59) return null;
+
+    return `${match[1]}:${match[2]}:${match[3] || '00'}`;
   }
 
   private guardarCSVProcesado(
     registros: RegistroLlamada[],
     archivoDestino: string,
-  ): void {
-    const ws = createWriteStream(archivoDestino);
+  ): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const ws = createWriteStream(archivoDestino);
+      ws.on('finish', resolve);
+      ws.on('error', reject);
 
-    const headers = [
+      const headers = [
       'Cta',
       'CallID',
       'Type',
@@ -267,13 +288,14 @@ export class CsvProcessor {
       'Lead ID',
       'List ID',
       'Hora',
-    ];
+      ];
 
-    const csvStream = fastCsv.format({ headers, delimiter: ',' });
-    csvStream.pipe(ws);
+      const csvStream = fastCsv.format({ headers, delimiter: ',' });
+      csvStream.on('error', reject);
+      csvStream.pipe(ws);
 
-    for (const registro of registros) {
-      csvStream.write({
+      for (const registro of registros) {
+        csvStream.write({
         Cta: registro.Cta,
         CallID: registro.CallID,
         Type: registro.Type,
@@ -298,10 +320,11 @@ export class CsvProcessor {
         'Lead ID': registro.LeadID,
         'List ID': registro.ListID,
         Hora: registro.Hora,
-      });
-    }
+        });
+      }
 
-    csvStream.end();
+      csvStream.end();
+    });
   }
 
   async leerCSVProcesado(rutaCSV: string): Promise<RegistroLlamada[]> {
@@ -353,7 +376,7 @@ export class CsvProcessor {
               HangupDateTime: data.HangupDateTime,
               LeadID: data['Lead ID'],
               ListID: data['List ID'],
-              Hora: data.Hora,
+              Hora: this.normalizarHora(data.Hora),
             };
             registros.push(registro);
           } catch (error: any) {

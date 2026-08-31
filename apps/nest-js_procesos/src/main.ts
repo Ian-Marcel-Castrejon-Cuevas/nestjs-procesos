@@ -30,8 +30,6 @@ async function bootstrap() {
   console.log('PORT:', process.env.PORT);
   console.log('SMTP_HOST:', process.env.SMTP_HOST);
   console.log('SMTP_TO:', process.env.SMTP_TO);
-  console.log('CCCONE_USER:', process.env.CCCONE_USER);
-  console.log('CCCONE_IMAP_USER:', process.env.CCCONE_IMAP_USER);
   console.log('CCC_USERNAME:', process.env.CCC_USERNAME);
   console.log('=====================================');
 
@@ -82,21 +80,6 @@ async function bootstrap() {
   console.log(
     '   ⏰ CRON: Se ejecuta automáticamente a las 2:00 AM (hora CDMX)',
   );
-
-  /*
-  console.log('\n📌 GENERADOR IVR REMINDER:');
-  console.log('   POST /api/ivr-reminder/generar-todos');
-  console.log('   POST /api/ivr-reminder/generar/:tipo');
-  console.log('   GET  /api/ivr-reminder/estado');
-  console.log('   GET  /api/ivr-reminder/tipos');
-  console.log('   GET  /api/ivr-reminder/verificar/:tipo');
-  */
-
-  /*
-  console.log('\n📌 GENERADOR CCC ONE REPORT:');
-  console.log('   POST /api/ccc-one/ejecutar');
-  console.log('   GET  /api/ccc-one/estado');
-   */
 
   console.log('\n📌 PHISHING (Carven2):');
   console.log('   POST   /phishing/registrar');

@@ -3,10 +3,8 @@ import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { LlamadaInbound } from './envio-inbound/entities/llamada-inbound.entity';
 import { EnvioInboundModule } from './envio-inbound/envio-inbound.module';
-//import { GeneradorModule } from './generador_reporte_ivr_reminder/generador.module';
 import { ReporteModule } from './reporte/reporte.module';
 import { VerificacionModule } from './verificacion/verificacion.module';
-//import { CccOneModule } from './ccc-one/ccc-one.module';
 import { PhishingModule } from './phishing/phishing.module';
 import { LeyendasModule } from './leyendas/leyendas.module';
 import { StatusModule } from './status/status.module';
@@ -39,9 +37,7 @@ import { CccDownloaderModule } from './ccc-downloader/ccc-downloader.module';
     }),
     VerificacionModule,
     ReporteModule,
-    //GeneradorModule,
     EnvioInboundModule,
-    //CccOneModule,
     PhishingModule,
     LeyendasModule,
     StatusModule,

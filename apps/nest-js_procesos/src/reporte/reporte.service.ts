@@ -95,17 +95,34 @@ export class ReporteService implements OnModuleInit {
    * NOTA: actualmente contiene credenciales en claro; se recomienda externalizar.
    */
   private getDbConfigOrigen() {
+    const user = process.env.DB_ORIGEN_USER || 'sistemasAsecon';
+    const password = process.env.DB_ORIGEN_PASSWORD || 'As3c0n2026i#';
+    const server = process.env.DB_ORIGEN_SERVER || '192.168.8.146';
+    const database = process.env.DB_ORIGEN_DATABASE || 'CCReportsRIA';
+    const port = process.env.DB_ORIGEN_PORT || '1433';
+
     return {
-      user: 'sistemasAsecon',
-      password: 'As3c0n2026i#',
-      server: '192.168.8.146',
-      database: 'CCReportsRIA',
-      port: 1433,
+      user,
+      password,
+      server,
+      database,
+      port: parseInt(port, 10),
       options: {
         encrypt: false,
         trustServerCertificate: true,
       },
     };
+  }
+
+  private getTablaOrigen(): string {
+    const esquema = process.env.DB_ORIGEN_SCHEMA || 'dbo';
+    const tabla = process.env.DB_ORIGEN_TABLE || 'RepInCallsDetail';
+
+    if (![esquema, tabla].every((valor) => /^[A-Za-z_][A-Za-z0-9_$]*$/.test(valor))) {
+      throw new Error('DB_ORIGEN_SCHEMA o DB_ORIGEN_TABLE contiene un identificador invalido');
+    }
+
+    return `[${esquema}].[${tabla}]`;
   }
 
   /**
@@ -829,6 +846,7 @@ export class ReporteService implements OnModuleInit {
 
       connectionOrigen = await sql.connect(this.getDbConfigOrigen());
 
+      const tablaOrigen = this.getTablaOrigen();
       const result = await connectionOrigen
         .request()
         .input('fechaInicio', sql.VarChar, fechaInicio)
@@ -864,7 +882,7 @@ export class ReporteService implements OnModuleInit {
             hour AS HoraOriginal,
             callid AS Id_llamada,
             grabId AS Id_grabación
-          FROM RepInCallsDetail
+          FROM ${tablaOrigen}
           WHERE date >= @fechaInicio AND date <= @fechaFin
             AND callStatus NOT IN ('Fuera de Horario', 'Inicial')
             AND ACDGroup <> 'Prueba IN'
@@ -1286,19 +1304,37 @@ export class ReporteService implements OnModuleInit {
     let connection: sql.ConnectionPool | null = null;
     try {
       connection = await sql.connect(this.getDbConfigOrigen());
+      const tablaOrigen = this.getTablaOrigen();
       const result = await connection
         .request()
-        .query(`SELECT TOP 5 * FROM RepInCallsDetail`);
+        .query(`SELECT TOP 5 * FROM ${tablaOrigen}`);
       return {
         exitoso: true,
+        tabla: tablaOrigen,
         registros: result.recordset.length,
         muestra: result.recordset.slice(0, 2),
       };
     } catch (error) {
+      const tablasDisponibles = connection
+        ? await connection
+            .request()
+            .query(`
+              SELECT TABLE_SCHEMA AS esquema, TABLE_NAME AS tabla
+              FROM INFORMATION_SCHEMA.TABLES
+              WHERE TABLE_NAME LIKE '%RepInCalls%'
+              ORDER BY TABLE_SCHEMA, TABLE_NAME
+            `)
+            .then((result) => result.recordset)
+            .catch(() => [])
+        : [];
+
       return {
         exitoso: false,
         error: error.message,
-        sugerencia: 'La tabla RepInCallsDetail no existe o no se puede acceder',
+        base: this.getDbConfigOrigen().database,
+        tablasDisponibles,
+        sugerencia:
+          'Verifica DB_ORIGEN_DATABASE, DB_ORIGEN_SCHEMA, DB_ORIGEN_TABLE y los permisos del usuario de origen',
       };
     } finally {
       if (connection) connection.close();
@@ -1320,7 +1356,7 @@ export class ReporteService implements OnModuleInit {
         .input('fechaInicio', sql.VarChar, fechaInicio)
         .input('fechaFin', sql.VarChar, fechaFin).query(`
           SELECT COUNT(*) as total
-          FROM RepInCallsDetail
+          FROM ${this.getTablaOrigen()}
           WHERE date >= @fechaInicio AND date <= @fechaFin
             AND callStatus NOT IN ('Fuera de Horario', 'Inicial')
             AND ACDGroup <> 'Prueba IN'
