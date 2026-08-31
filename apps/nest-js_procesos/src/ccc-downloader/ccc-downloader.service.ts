@@ -199,7 +199,8 @@ export class CccDownloaderService implements OnModuleDestroy {
         },
       };
 
-      this.pool = await mssql.connect(config);
+      this.pool = new mssql.ConnectionPool(config);
+      await this.pool.connect();
       this.logger.log(
         `✅ Conectado a SQL Server: ${this.dbConfig.server}/${this.dbConfig.database}`,
       );

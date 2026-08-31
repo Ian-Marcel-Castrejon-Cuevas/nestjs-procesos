@@ -118,11 +118,23 @@ export class ReporteService implements OnModuleInit {
     const esquema = process.env.DB_ORIGEN_SCHEMA || 'dbo';
     const tabla = process.env.DB_ORIGEN_TABLE || 'RepInCallsDetail';
 
-    if (![esquema, tabla].every((valor) => /^[A-Za-z_][A-Za-z0-9_$]*$/.test(valor))) {
-      throw new Error('DB_ORIGEN_SCHEMA o DB_ORIGEN_TABLE contiene un identificador invalido');
+    if (
+      ![esquema, tabla].every((valor) =>
+        /^[A-Za-z_][A-Za-z0-9_$]*$/.test(valor),
+      )
+    ) {
+      throw new Error(
+        'DB_ORIGEN_SCHEMA o DB_ORIGEN_TABLE contiene un identificador invalido',
+      );
     }
 
     return `[${esquema}].[${tabla}]`;
+  }
+
+  private async conectarPool(config: sql.config): Promise<sql.ConnectionPool> {
+    const pool = new sql.ConnectionPool(config);
+    await pool.connect();
+    return pool;
   }
 
   /**
@@ -139,12 +151,12 @@ export class ReporteService implements OnModuleInit {
       let testOrigenConn: sql.ConnectionPool | null = null;
 
       try {
-        testDestinoConn = await sql.connect(this.getDbConfigDestino());
-        testOrigenConn = await sql.connect(this.getDbConfigOrigen());
+        testDestinoConn = await this.conectarPool(this.getDbConfigDestino());
+        testOrigenConn = await this.conectarPool(this.getDbConfigOrigen());
         this.logger.log('Servicio inicializado correctamente');
       } finally {
-        if (testDestinoConn) testDestinoConn.close();
-        if (testOrigenConn) testOrigenConn.close();
+        if (testDestinoConn) await testDestinoConn.close();
+        if (testOrigenConn) await testOrigenConn.close();
       }
 
       cron.schedule('00 07 * * *', () => {
@@ -220,7 +232,7 @@ export class ReporteService implements OnModuleInit {
   private async corregirTextosEnTabla(fechaStr: string) {
     let connection: sql.ConnectionPool | null = null;
     try {
-      connection = await sql.connect(this.getDbConfigDestino());
+      connection = await this.conectarPool(this.getDbConfigDestino());
       await connection.request().input('fecha', sql.VarChar, fechaStr).query(`
           UPDATE dbo.reporte_inbound 
           SET ESTADO_DE_LLAMADA = 'Desbordada (número en espera excedido)'
@@ -231,7 +243,7 @@ export class ReporteService implements OnModuleInit {
     } catch (error) {
       this.logger.error(`Error corrigiendo textos: ${error.message}`);
     } finally {
-      if (connection) connection.close();
+      if (connection) await connection.close();
     }
   }
 
@@ -844,7 +856,7 @@ export class ReporteService implements OnModuleInit {
         `Consultando SQL para fecha: ${fechaInicio} a ${fechaFin}`,
       );
 
-      connectionOrigen = await sql.connect(this.getDbConfigOrigen());
+      connectionOrigen = await this.conectarPool(this.getDbConfigOrigen());
 
       const tablaOrigen = this.getTablaOrigen();
       const result = await connectionOrigen
@@ -942,7 +954,7 @@ export class ReporteService implements OnModuleInit {
       this.logger.error(`Error consultando SQL: ${error.message}`);
       return [];
     } finally {
-      if (connectionOrigen) connectionOrigen.close();
+      if (connectionOrigen) await connectionOrigen.close();
     }
   }
 
@@ -1001,7 +1013,7 @@ export class ReporteService implements OnModuleInit {
     let errores = 0;
 
     try {
-      connectionDestino = await sql.connect(this.getDbConfigDestino());
+      connectionDestino = await this.conectarPool(this.getDbConfigDestino());
 
       for (const row of datos) {
         try {
@@ -1053,7 +1065,7 @@ export class ReporteService implements OnModuleInit {
       this.logger.error(`Error insertando datos: ${error.message}`);
       return { insertados, errores };
     } finally {
-      if (connectionDestino) connectionDestino.close();
+      if (connectionDestino) await connectionDestino.close();
     }
   }
 
@@ -1263,7 +1275,7 @@ export class ReporteService implements OnModuleInit {
   async probarConexionDestino() {
     let connection: sql.ConnectionPool | null = null;
     try {
-      connection = await sql.connect(this.getDbConfigDestino());
+      connection = await this.conectarPool(this.getDbConfigDestino());
       const result = await connection
         .request()
         .query('SELECT GETDATE() as fecha, DB_NAME() as database_name');
@@ -1276,14 +1288,14 @@ export class ReporteService implements OnModuleInit {
     } catch (error) {
       throw new Error(`Error en destino: ${error.message}`);
     } finally {
-      if (connection) connection.close();
+      if (connection) await connection.close();
     }
   }
 
   async probarConexionOrigen() {
     let connection: sql.ConnectionPool | null = null;
     try {
-      connection = await sql.connect(this.getDbConfigOrigen());
+      connection = await this.conectarPool(this.getDbConfigOrigen());
       const result = await connection
         .request()
         .query('SELECT GETDATE() as fecha, DB_NAME() as database_name');
@@ -1296,14 +1308,14 @@ export class ReporteService implements OnModuleInit {
     } catch (error) {
       throw new Error(`Error en origen: ${error.message}`);
     } finally {
-      if (connection) connection.close();
+      if (connection) await connection.close();
     }
   }
 
   async probarTablaOrigen() {
     let connection: sql.ConnectionPool | null = null;
     try {
-      connection = await sql.connect(this.getDbConfigOrigen());
+      connection = await this.conectarPool(this.getDbConfigOrigen());
       const tablaOrigen = this.getTablaOrigen();
       const result = await connection
         .request()
@@ -1318,12 +1330,14 @@ export class ReporteService implements OnModuleInit {
       const tablasDisponibles = connection
         ? await connection
             .request()
-            .query(`
+            .query(
+              `
               SELECT TABLE_SCHEMA AS esquema, TABLE_NAME AS tabla
               FROM INFORMATION_SCHEMA.TABLES
               WHERE TABLE_NAME LIKE '%RepInCalls%'
               ORDER BY TABLE_SCHEMA, TABLE_NAME
-            `)
+            `,
+            )
             .then((result) => result.recordset)
             .catch(() => [])
         : [];
@@ -1337,7 +1351,7 @@ export class ReporteService implements OnModuleInit {
           'Verifica DB_ORIGEN_DATABASE, DB_ORIGEN_SCHEMA, DB_ORIGEN_TABLE y los permisos del usuario de origen',
       };
     } finally {
-      if (connection) connection.close();
+      if (connection) await connection.close();
     }
   }
 
@@ -1349,7 +1363,7 @@ export class ReporteService implements OnModuleInit {
       const fechaInicio = `${yyyy}-${mm}-${dd} 08:00:00`;
       const fechaFin = `${yyyy}-${mm}-${dd} 21:00:00`;
 
-      connectionOrigen = await sql.connect(this.getDbConfigOrigen());
+      connectionOrigen = await this.conectarPool(this.getDbConfigOrigen());
 
       const result = await connectionOrigen
         .request()
@@ -1371,7 +1385,7 @@ export class ReporteService implements OnModuleInit {
       this.logger.error(`Error en diagnostico: ${error.message}`);
       return null;
     } finally {
-      if (connectionOrigen) connectionOrigen.close();
+      if (connectionOrigen) await connectionOrigen.close();
     }
   }
 
