@@ -41,6 +41,29 @@ lerna-debug.log*
 .env.test.local
 .env.production.local
 .env.local
+.env.*.local
+
+# Local data, exports, browser profiles and databases
+/temp/
+/descargas/
+/downloads/
+/chrome_profile_ivr_reminder/
+*.db
+*.sqlite
+*.sqlite3
+*.csv
+*.xlsx
+*.xls
+*.zip
+phishing_registros*.json
+phishing_registros*.db
+Cookies
+*Cookies*
+Login Data
+*Login Data*
+History
+Local State
+trusted_vault.pb
 
 # temp directory
 .temp

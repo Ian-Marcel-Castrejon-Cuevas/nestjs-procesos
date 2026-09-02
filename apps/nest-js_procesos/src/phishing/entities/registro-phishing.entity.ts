@@ -13,9 +13,6 @@ export class RegistroPhishing {
   @Column()
   ch: string;
 
-  @Column()
-  password: string;
-
   @Column({ name: 'ip_address' })
   ipAddress: string;
 

@@ -1,4 +1,5 @@
 # Manual de usuario
+
 ## Módulo de phishing educativo Carven2
 
 **Proyectos:** `nestjs-procesos` y `proyecto-one`  
@@ -79,7 +80,7 @@ El panel es únicamente para personal autorizado.
 3. Pulsa **Acceder**.
 4. Espera a que carguen los registros y estadísticas.
 
-La contraseña configurada actualmente es `admin123`. Debe cambiarse y protegerse antes de usar el sistema en un ambiente real.
+El acceso administrativo se configura mediante una variable de entorno. Nunca publiques su valor ni utilices credenciales reales durante las pruebas.
 
 ### 4.2. Información disponible
 
@@ -89,7 +90,7 @@ El panel muestra:
 - **Registros de hoy.**
 - **Intentos de login.**
 - **Visitas.**
-- Detalle de cada registro: ID, CH, contraseña capturada, IP, fecha/hora y tipo.
+- Detalle de cada registro: ID, CH, IP, navegador, fecha/hora y tipo. Las contraseñas nunca se almacenan.
 
 Los registros aparecen del más reciente al más antiguo.
 

@@ -21,18 +21,6 @@ function getLocalIP() {
 }
 
 async function bootstrap() {
-  console.log('=== VARIABLES DE ENTORNO CARGADAS ===');
-  console.log('PG_HOST:', process.env.PG_HOST);
-  console.log('PG_USER:', process.env.PG_USER);
-  console.log('DB_SERVER:', process.env.DB_SERVER);
-  console.log('DB_HOST2:', process.env.DB_HOST2);
-  console.log('DB_USERNAME2:', process.env.DB_USERNAME2);
-  console.log('PORT:', process.env.PORT);
-  console.log('SMTP_HOST:', process.env.SMTP_HOST);
-  console.log('SMTP_TO:', process.env.SMTP_TO);
-  console.log('CCC_USERNAME:', process.env.CCC_USERNAME);
-  console.log('=====================================');
-
   const app = await NestFactory.create(AppModule);
 
   app.enableCors();

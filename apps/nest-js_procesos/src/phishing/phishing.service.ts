@@ -1,11 +1,10 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import * as fs from 'fs';
 import * as path from 'path';
 
 export interface RegistroPhishing {
   id: number;
   ch: string;
-  password: string;
   ipAddress: string;
   userAgent: string;
   pagina: string;
@@ -68,7 +67,6 @@ export class PhishingService {
     const nuevoRegistro: RegistroPhishing = {
       id: this.currentId++,
       ch: data.ch,
-      password: data.password,
       ipAddress: ipAddress,
       userAgent: data.user_agent || '',
       pagina: data.pagina || '',
@@ -127,7 +125,6 @@ export class PhishingService {
     for (const reg of this.registros) {
       contenido += `ID: ${reg.id}\n`;
       contenido += `CH: ${reg.ch}\n`;
-      contenido += `Contraseña: ${reg.password}\n`;
       contenido += `IP: ${reg.ipAddress}\n`;
       contenido += `User Agent: ${reg.userAgent || 'N/A'}\n`;
       contenido += `Página: ${reg.pagina || 'N/A'}\n`;
@@ -146,12 +143,10 @@ export class PhishingService {
     }
 
     const csvPath = path.join(tempDir, `phishing_registros_${Date.now()}.csv`);
-    const headers = [
-      'ID,CH,Contraseña,IP Address,User Agent,Página,Fecha/Hora,Tipo\n',
-    ];
+    const headers = ['ID,CH,IP Address,User Agent,Página,Fecha/Hora,Tipo\n'];
     const rows = this.registros.map(
       (reg) =>
-        `${reg.id},"${reg.ch}","${reg.password}","${reg.ipAddress}","${(reg.userAgent || '').replace(/"/g, '""')}","${reg.pagina || ''}","${reg.fechaHora}","${reg.tipo}"`,
+        `${reg.id},"${reg.ch}","${reg.ipAddress}","${(reg.userAgent || '').replace(/"/g, '""')}","${reg.pagina || ''}","${reg.fechaHora}","${reg.tipo}"`,
     );
 
     const csvContent = headers.concat(rows).join('\n');

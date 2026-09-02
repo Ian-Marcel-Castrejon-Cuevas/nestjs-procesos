@@ -1,4 +1,5 @@
 # Manual de mantenimiento
+
 ## Sistema de verificación EDOMEX, Botar Carven, Leyendas, Status y Devoluciones
 
 **Versión:** 1.0  
@@ -51,7 +52,7 @@ Navegador
    v
 proyecto-one (React + Vite)
    |
-   | actualmente apunta a http://192.168.28.35:3002
+  | debe apuntar al endpoint definido por el entorno
    v
 nestjs-procesos (NestJS)
    |
@@ -64,34 +65,34 @@ nestjs-procesos (NestJS)
 
 ### 2.1 Componentes de frontend
 
-| Funcion | Ruta | Archivo principal |
-|---|---|---|
-| Verificación | `/` y `/proyect-one` | `proyecto-one/src/App.jsx` |
-| Leyendas | `/leyendas` | `proyecto-one/src/components/Leyendas.jsx` |
-| Status | `/status` | `proyecto-one/src/components/Status.jsx` |
-| Devoluciones | `/devoluciones` | `proyecto-one/src/components/Devoluciones.jsx` |
+| Funcion      | Ruta                 | Archivo principal                              |
+| ------------ | -------------------- | ---------------------------------------------- |
+| Verificación | `/` y `/proyect-one` | `proyecto-one/src/App.jsx`                     |
+| Leyendas     | `/leyendas`          | `proyecto-one/src/components/Leyendas.jsx`     |
+| Status       | `/status`            | `proyecto-one/src/components/Status.jsx`       |
+| Devoluciones | `/devoluciones`      | `proyecto-one/src/components/Devoluciones.jsx` |
 
 ### 2.2 Componentes de backend
 
-| Funcion | Controller | Service | Persistencia |
-|---|---|---|---|
-| Verificación | `verificacion.controller.ts` | `verificacion.service.ts` | PostgreSQL |
-| Botar Carven | `verificacion.controller.ts` | `verificacion.service.ts` | PostgreSQL |
-| Leyendas | `leyendas.controller.ts` | `leyendas.service.ts` | Archivos temporales |
-| Status | `status.controller.ts` | `status.service.ts` | PostgreSQL |
-| Devoluciones | `devoluciones.controller.ts` | `devoluciones.service.ts` | PostgreSQL |
+| Funcion      | Controller                   | Service                   | Persistencia        |
+| ------------ | ---------------------------- | ------------------------- | ------------------- |
+| Verificación | `verificacion.controller.ts` | `verificacion.service.ts` | PostgreSQL          |
+| Botar Carven | `verificacion.controller.ts` | `verificacion.service.ts` | PostgreSQL          |
+| Leyendas     | `leyendas.controller.ts`     | `leyendas.service.ts`     | Archivos temporales |
+| Status       | `status.controller.ts`       | `status.service.ts`       | PostgreSQL          |
+| Devoluciones | `devoluciones.controller.ts` | `devoluciones.service.ts` | PostgreSQL          |
 
 ---
 
 ## 3. Inventario de operaciones y nivel de riesgo
 
-| Operación | Método | Riesgo | Acción de mantenimiento |
-|---|---|---:|---|
-| Verificación | `POST /verificacion/verificar` | Medio | Revisar consultas, índices y conectividad |
+| Operación    | Método                                 |  Riesgo | Acción de mantenimiento                   |
+| ------------ | -------------------------------------- | ------: | ----------------------------------------- |
+| Verificación | `POST /verificacion/verificar`         |   Medio | Revisar consultas, índices y conectividad |
 | Botar Carven | `DELETE /verificacion/borrar-ingresos` | Crítico | Respaldo y autorización antes de ejecutar |
-| Leyendas | `POST /leyendas/procesar` o navegador | Medio | Vigilar disco, temporales y memoria |
-| Status | `POST /status/cambiar` | Alto | Validar catálogo, respaldo y resultados |
-| Devoluciones | `POST /devoluciones/procesar` | Alto | Validar fecha, identificador y resultado |
+| Leyendas     | `POST /leyendas/procesar` o navegador  |   Medio | Vigilar disco, temporales y memoria       |
+| Status       | `POST /status/cambiar`                 |    Alto | Validar catálogo, respaldo y resultados   |
+| Devoluciones | `POST /devoluciones/procesar`          |    Alto | Validar fecha, identificador y resultado  |
 
 `Botar Carven`, Status y Devoluciones modifican datos o eliminan registros. No deben probarse contra producción sin una ventana de mantenimiento, respaldo y aprobación.
 
@@ -151,7 +152,7 @@ La aplicación también carga una conexión MSSQL mediante TypeORM con `DB_SERVE
 Las pantallas revisadas tienen llamadas fijas a:
 
 ```text
-http://192.168.28.35:3002
+http://localhost:3001
 ```
 
 Este desajuste debe resolverse antes de desplegar. Las alternativas son:
@@ -211,7 +212,7 @@ GET /verificacion
 Respuesta esperada:
 
 ```json
-{"mensaje":"Servidor backend activo"}
+{ "mensaje": "Servidor backend activo" }
 ```
 
 4. Abrir la ruta principal del frontend.
@@ -432,7 +433,7 @@ Acciones:
 `POST /verificacion/verificar` recibe:
 
 ```json
-{"claves":["123456789","123456790"]}
+{ "claves": ["123456789", "123456790"] }
 ```
 
 El servicio consulta las tablas relacionadas y filtra:
@@ -642,12 +643,12 @@ No cambiar nuevamente el status sin conocer el valor anterior. Usar el respaldo 
 
 ```json
 {
-  "tipo":"carven",
-  "registros":[
+  "tipo": "carven",
+  "registros": [
     {
-      "identificador":"123456789",
-      "codStatus":"69",
-      "fecha":"19/08/2026"
+      "identificador": "123456789",
+      "codStatus": "69",
+      "fecha": "19/08/2026"
     }
   ]
 }
@@ -726,7 +727,7 @@ Debe devolver `Servidor backend activo`.
 Enviar uno o dos carven conocidos con:
 
 ```json
-{"claves":["CARVEN_CONTROLADO"]}
+{ "claves": ["CARVEN_CONTROLADO"] }
 ```
 
 Confirmar respuesta 200 o arreglo vacio razonado.
@@ -1006,16 +1007,16 @@ Autorización:
 
 ## 24. Referencia rápida de endpoints
 
-| Operación | Endpoint | Método | Cuerpo |
-|---|---|---|---|
-| Salud | `/verificacion` | GET | Ninguno |
-| Verificación | `/verificacion/verificar` | POST | `{ "claves": [] }` |
-| Botar Carven | `/verificacion/borrar-ingresos` | DELETE | Ninguno |
-| Leyendas | `/leyendas/procesar` | POST | multipart `file` + campos |
-| Descargar Leyendas | `/leyendas/download/:sessionId/:fileIndex` | GET | Ninguno |
-| Sesión Leyendas | `/leyendas/session/:sessionId` | GET | Ninguno |
-| Status | `/status/cambiar` | POST | `{ "status": "", "claves": [] }` |
-| Devoluciones | `/devoluciones/procesar` | POST | `{ "tipo": "", "registros": [] }` |
+| Operación          | Endpoint                                   | Método | Cuerpo                            |
+| ------------------ | ------------------------------------------ | ------ | --------------------------------- |
+| Salud              | `/verificacion`                            | GET    | Ninguno                           |
+| Verificación       | `/verificacion/verificar`                  | POST   | `{ "claves": [] }`                |
+| Botar Carven       | `/verificacion/borrar-ingresos`            | DELETE | Ninguno                           |
+| Leyendas           | `/leyendas/procesar`                       | POST   | multipart `file` + campos         |
+| Descargar Leyendas | `/leyendas/download/:sessionId/:fileIndex` | GET    | Ninguno                           |
+| Sesión Leyendas    | `/leyendas/session/:sessionId`             | GET    | Ninguno                           |
+| Status             | `/status/cambiar`                          | POST   | `{ "status": "", "claves": [] }`  |
+| Devoluciones       | `/devoluciones/procesar`                   | POST   | `{ "tipo": "", "registros": [] }` |
 
 ---
 

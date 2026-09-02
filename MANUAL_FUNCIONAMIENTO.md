@@ -1,4 +1,5 @@
 # Manual de funcionamiento
+
 ## Verificacion EDOMEX, Botar Carven, Leyendas, Status y Devoluciones
 
 **Version del manual:** 1.0  
@@ -27,12 +28,12 @@ La interfaz esta implementada en `proyecto-one` con React. Los procesos de Verif
 
 La ruta principal se encuentra en `/` y tambien en `/proyect-one`. Desde ella se puede acceder a:
 
-| Funcion | Ruta de pantalla | Componente |
-|---|---|---|
-| Verificacion EDOMEX | `/` o `/proyect-one` | `App.jsx` |
-| Leyendas | `/leyendas` | `Leyendas.jsx` |
-| Status | `/status` | `Status.jsx` |
-| Devoluciones | `/devoluciones` | `Devoluciones.jsx` |
+| Funcion             | Ruta de pantalla     | Componente         |
+| ------------------- | -------------------- | ------------------ |
+| Verificacion EDOMEX | `/` o `/proyect-one` | `App.jsx`          |
+| Leyendas            | `/leyendas`          | `Leyendas.jsx`     |
+| Status              | `/status`            | `Status.jsx`       |
+| Devoluciones        | `/devoluciones`      | `Devoluciones.jsx` |
 
 La interfaz usa archivos `.xlsx` y `.xls` y genera algunos archivos de salida directamente en el navegador.
 
@@ -42,16 +43,16 @@ El modulo raiz registra los modulos `VerificacionModule`, `LeyendasModule`, `Sta
 
 Endpoints principales:
 
-| Funcion | Metodo y endpoint |
-|---|---|
-| Verificar carven | `POST /verificacion/verificar` |
-| Comprobar backend activo | `GET /verificacion` |
-| Botar ingresos | `DELETE /verificacion/borrar-ingresos` |
-| Procesar Leyendas en servidor | `POST /leyendas/procesar` |
-| Descargar parte de Leyendas | `GET /leyendas/download/:sessionId/:fileIndex` |
-| Consultar sesion de Leyendas | `GET /leyendas/session/:sessionId` |
-| Cambiar status | `POST /status/cambiar` |
-| Procesar devoluciones | `POST /devoluciones/procesar` |
+| Funcion                       | Metodo y endpoint                              |
+| ----------------------------- | ---------------------------------------------- |
+| Verificar carven              | `POST /verificacion/verificar`                 |
+| Comprobar backend activo      | `GET /verificacion`                            |
+| Botar ingresos                | `DELETE /verificacion/borrar-ingresos`         |
+| Procesar Leyendas en servidor | `POST /leyendas/procesar`                      |
+| Descargar parte de Leyendas   | `GET /leyendas/download/:sessionId/:fileIndex` |
+| Consultar sesion de Leyendas  | `GET /leyendas/session/:sessionId`             |
+| Cambiar status                | `POST /status/cambiar`                         |
+| Procesar devoluciones         | `POST /devoluciones/procesar`                  |
 
 ---
 
@@ -114,7 +115,7 @@ El mismo backend tambien configura una conexion MSSQL mediante TypeORM para otro
 Las pantallas de `proyecto-one` tienen actualmente las llamadas escritas hacia:
 
 ```text
-http://192.168.28.35:3002
+http://localhost:3001
 ```
 
 Sin embargo, el backend NestJS usa `PORT` y por defecto escucha en `3001`. Antes de operar se debe confirmar una de estas situaciones:
@@ -126,13 +127,13 @@ Sin embargo, el backend NestJS usa `PORT` y por defecto escucha en `3001`. Antes
 Prueba rapida del backend:
 
 ```text
-GET http://192.168.28.35:3002/verificacion
+GET http://localhost:3001/verificacion
 ```
 
 Respuesta esperada:
 
 ```json
-{"mensaje":"Servidor backend activo"}
+{ "mensaje": "Servidor backend activo" }
 ```
 
 Si la prueba falla, no iniciar cargas ni actualizaciones: la pantalla no podra completar las operaciones.
@@ -327,13 +328,13 @@ El archivo de entrada debe tener encabezados en la primera hoja y al menos una f
 
 ### 6.3 Nomenclatura de salida
 
-| Cartera | Codigo usado |
-|---|---|
-| Scotiabank | `SCOT` |
-| BBVA | `BBVA` |
-| ATT | `ATT` |
-| GMF | `GMF` |
-| Toyota | `TYT` |
+| Cartera    | Codigo usado |
+| ---------- | ------------ |
+| Scotiabank | `SCOT`       |
+| BBVA       | `BBVA`       |
+| ATT        | `ATT`        |
+| GMF        | `GMF`        |
+| Toyota     | `TYT`        |
 
 El nombre se forma asi:
 
@@ -459,11 +460,7 @@ Content-Type: application/json
 ```json
 {
   "status": "42",
-  "claves": [
-    "123456789",
-    "123456790",
-    "123456791"
-  ]
+  "claves": ["123456789", "123456790", "123456791"]
 }
 ```
 
@@ -526,10 +523,10 @@ Cada fila se procesa individualmente.
 
 El archivo debe ser `.xlsx` o `.xls` y tener encabezados en la primera hoja. Se recomienda incluir columnas como:
 
-| CARVEN o NUM CREDITO | FECHA | COD STATUS |
-|---|---|---|
-| 123456789 | 19/08/2026 | 69 |
-| 123456790 | 20/08/2026 | 70 |
+| CARVEN o NUM CREDITO | FECHA      | COD STATUS |
+| -------------------- | ---------- | ---------- |
+| 123456789            | 19/08/2026 | 69         |
+| 123456790            | 20/08/2026 | 70         |
 
 Los nombres exactos pueden ser diferentes: la pantalla muestra los encabezados detectados y permite elegirlos.
 
@@ -660,7 +657,7 @@ devoluciones_YYYY-MM-DD.xlsx
 1. Probar `GET /verificacion` en la misma IP y puerto que usa el frontend.
 2. Confirmar que NestJS esta levantado.
 3. Confirmar el valor de `PORT`.
-4. Confirmar que el puerto del frontend coincide con `192.168.28.35:3002` o ajustar la URL.
+4. Confirmar que el puerto del frontend coincide con el endpoint configurado en el entorno.
 5. Revisar firewall y conectividad de red.
 6. Revisar CORS si el navegador bloquea la solicitud.
 
@@ -739,13 +736,13 @@ En Verificacion, un carven puede no pertenecer a los filtros EDOMEX. En Status y
 
 ## 11. Resumen de impacto en base de datos
 
-| Funcion | Tabla(s) | Operacion |
-|---|---|---|
-| Verificacion | `tbdeudor`, `tbdirecciones`, `tbmunicipios`, `tbestados` | `SELECT` |
-| Botar Carven | `tbingresos` | `DELETE` |
-| Status | `TBDEUDOR` | `UPDATE STNCVESTATUS` |
-| Devoluciones | `TBDEUDOR` | `UPDATE STNCVESTATUS` y `UPDATE DEFFECDEVOLUCION` |
-| Leyendas | Archivos temporales | Lectura, transformacion y escritura de Excel |
+| Funcion      | Tabla(s)                                                 | Operacion                                         |
+| ------------ | -------------------------------------------------------- | ------------------------------------------------- |
+| Verificacion | `tbdeudor`, `tbdirecciones`, `tbmunicipios`, `tbestados` | `SELECT`                                          |
+| Botar Carven | `tbingresos`                                             | `DELETE`                                          |
+| Status       | `TBDEUDOR`                                               | `UPDATE STNCVESTATUS`                             |
+| Devoluciones | `TBDEUDOR`                                               | `UPDATE STNCVESTATUS` y `UPDATE DEFFECDEVOLUCION` |
+| Leyendas     | Archivos temporales                                      | Lectura, transformacion y escritura de Excel      |
 
 Status y Devoluciones son cambios directos en la base de datos. Botar Carven es una eliminacion directa. Estas tres acciones deben tratarse como operaciones de escritura y contar con autorizacion operativa.
 
@@ -753,7 +750,7 @@ Status y Devoluciones son cambios directos en la base de datos. Botar Carven es 
 
 ## 12. Limitaciones conocidas
 
-- Las URLs del frontend estan escritas de forma fija hacia `192.168.28.35:3002`.
+- Las URLs del frontend deben salir de configuración y no incluir hosts internos en el código.
 - El backend NestJS usa `3001` por defecto si no se define `PORT`.
 - La pantalla de Leyendas procesa localmente y no utiliza actualmente el endpoint de Leyendas de NestJS.
 - La pantalla de Verificacion usa una misma columna para todos los archivos seleccionados.

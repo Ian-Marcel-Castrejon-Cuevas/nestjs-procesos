@@ -11,6 +11,7 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
+import { timingSafeEqual } from 'crypto';
 import { PhishingService } from './phishing.service';
 import { RegistrarIntentoDto } from './dto/registrar-intento.dto';
 
@@ -50,8 +51,17 @@ export class PhishingController {
 
   @Post('verify-admin')
   async verifyAdmin(@Body() body: { password: string }) {
-    const ADMIN_PASSWORD = 'admin123';
-    return { success: body.password === ADMIN_PASSWORD };
+    const configuredPassword = process.env.PHISHING_ADMIN_PASSWORD;
+    if (!configuredPassword || typeof body.password !== 'string') {
+      return { success: false };
+    }
+
+    const provided = Buffer.from(body.password);
+    const expected = Buffer.from(configuredPassword);
+    const success =
+      provided.length === expected.length &&
+      timingSafeEqual(provided, expected);
+    return { success };
   }
 
   @Get('registros')
@@ -139,10 +149,10 @@ export class PhishingController {
         </div>
         <a href="/carven2/admin">🔐 Ir al Panel Admin</a>
         <table border="1">
-          <tr><th>ID</th><th>CH</th><th>Contraseña</th><th>IP</th><th>Fecha/Hora</th><th>Tipo</th></tr>
+          <tr><th>ID</th><th>CH</th><th>IP</th><th>Fecha/Hora</th><th>Tipo</th></tr>
     `;
     for (const reg of registros) {
-      html += `<tr><td>${reg.id}</td><td>${reg.ch}</td><td>${reg.password}</td><td>${reg.ipAddress}</td><td>${reg.fechaHora}</td><td>${reg.tipo}</td></tr>`;
+      html += `<tr><td>${reg.id}</td><td>${reg.ch}</td><td>${reg.ipAddress}</td><td>${reg.fechaHora}</td><td>${reg.tipo}</td></tr>`;
     }
     html += `</table></body></html>`;
     res.send(html);

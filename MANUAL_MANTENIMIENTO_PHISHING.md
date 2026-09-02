@@ -1,4 +1,5 @@
 # Manual de mantenimiento
+
 ## Módulo de phishing educativo Carven2
 
 **Proyectos:** `nestjs-procesos` y `proyecto-one`  
@@ -26,13 +27,13 @@ Aplica únicamente a:
 
 ## 2. Componentes que se deben revisar
 
-| Componente | Revisión principal |
-|---|---|
-| `/carven2` | Registro de visitas e intentos |
-| `/carven2/admin` | Consulta, estadísticas y eliminación |
-| `PhishingService` | Lectura y escritura del JSON |
-| `phishing_registros.json` | Integridad de los registros |
-| `temp/` | Archivos CSV temporales |
+| Componente                | Revisión principal                   |
+| ------------------------- | ------------------------------------ |
+| `/carven2`                | Registro de visitas e intentos       |
+| `/carven2/admin`          | Consulta, estadísticas y eliminación |
+| `PhishingService`         | Lectura y escritura del JSON         |
+| `phishing_registros.json` | Integridad de los registros          |
+| `temp/`                   | Archivos CSV temporales              |
 
 ## 3. Arranque y verificación
 
@@ -54,7 +55,7 @@ Verificar que:
 - Se registre una visita al abrir la pantalla.
 - `/carven2/admin` permita consultar datos.
 - El frontend y backend utilicen el host y puerto correctos.
-- El frontend apunta actualmente a `http://192.168.28.35:3002`.
+- El frontend debe apuntar al endpoint configurado para el entorno; usa `http://localhost:3001` en desarrollo local.
 - NestJS usa `PORT` o `3001` por defecto.
 
 ## 4. Respaldo
@@ -138,7 +139,7 @@ Después prueba `/carven2`, el registro de visita y `/carven2/admin`.
 ## 8. Seguridad
 
 - No uses credenciales reales.
-- La contraseña administrativa actual está fija como `admin123`; debe cambiarse antes de producción.
+- La contraseña administrativa se configura mediante `PHISHING_ADMIN_PASSWORD` y nunca debe escribirse en el código.
 - Protege los endpoints administrativos.
 - No expongas `/phishing/ver` sin autenticación.
 - No compartas exportaciones sin autorización.

@@ -22,32 +22,20 @@ export class ReporteService implements OnModuleInit {
    * Constructor: inicializa variables de configuración del portal (lee env).
    */
   constructor() {
-    this.PORTAL_BASE_URL = this.obtenerVariableEntorno(
-      'PORTAL_BASE_URL',
-      'https://cwxion66.nuxiba.com/sitioreportes',
-    );
-    this.PORTAL_USER = this.obtenerVariableEntorno(
-      'PORTAL_USER',
-      'admin_cliente',
-    );
-    this.PORTAL_PASSWORD = this.obtenerVariableEntorno(
-      'PORTAL_PASSWORD',
-      'V9#qL7@mX2!rN8',
-    );
+    this.PORTAL_BASE_URL = this.obtenerVariableEntorno('PORTAL_BASE_URL');
+    this.PORTAL_USER = this.obtenerVariableEntorno('PORTAL_USER');
+    this.PORTAL_PASSWORD = this.obtenerVariableEntorno('PORTAL_PASSWORD');
 
     this.logger.log(`Portal configurado: ${this.PORTAL_BASE_URL}`);
     this.logger.log(`Usuario: ${this.PORTAL_USER}`);
     this.logger.log(`Contraseña: ${'*'.repeat(this.PORTAL_PASSWORD.length)}`);
   }
 
-  private obtenerVariableEntorno(
-    nombre: string,
-    valorPorDefecto: string,
-  ): string {
+  private obtenerVariableEntorno(nombre: string): string {
     let valor = process.env[nombre];
 
     if (!valor) {
-      return valorPorDefecto;
+      throw new Error(`Falta la variable de entorno ${nombre}`);
     }
 
     valor = valor.trim();
@@ -95,11 +83,11 @@ export class ReporteService implements OnModuleInit {
    * NOTA: actualmente contiene credenciales en claro; se recomienda externalizar.
    */
   private getDbConfigOrigen() {
-    const user = process.env.DB_ORIGEN_USER || 'sistemasAsecon';
-    const password = process.env.DB_ORIGEN_PASSWORD || 'As3c0n2026i#';
-    const server = process.env.DB_ORIGEN_SERVER || '192.168.8.146';
-    const database = process.env.DB_ORIGEN_DATABASE || 'CCReportsRIA';
-    const port = process.env.DB_ORIGEN_PORT || '1433';
+    const user = this.obtenerVariableEntorno('DB_ORIGEN_USER');
+    const password = this.obtenerVariableEntorno('DB_ORIGEN_PASSWORD');
+    const server = this.obtenerVariableEntorno('DB_ORIGEN_SERVER');
+    const database = this.obtenerVariableEntorno('DB_ORIGEN_DATABASE');
+    const port = this.obtenerVariableEntorno('DB_ORIGEN_PORT');
 
     return {
       user,
@@ -1301,7 +1289,7 @@ export class ReporteService implements OnModuleInit {
         .query('SELECT GETDATE() as fecha, DB_NAME() as database_name');
       return {
         status: 'Conectado',
-        server: '192.168.8.146',
+        server: process.env.DB_ORIGEN_SERVER,
         database: result.recordset[0].database_name,
         fecha: result.recordset[0].fecha,
       };

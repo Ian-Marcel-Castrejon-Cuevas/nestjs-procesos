@@ -38,19 +38,16 @@ export class CccDownloaderService implements OnModuleDestroy {
     private csvProcessor: CsvProcessor,
   ) {
     this.credenciales = {
-      username: this.configService.get('CCC_USERNAME', 'IAN CUEVAS'),
-      password: 'Asecon2026i#',
+      username: this.configService.getOrThrow<string>('CCC_USERNAME'),
+      password: this.configService.getOrThrow<string>('CCC_PASSWORD'),
     };
 
     this.dbConfig = {
-      server: this.configService.get('DB_HOST2', '192.168.28.35'),
-      port: parseInt(this.configService.get('DB_PORT2', '1433')),
-      user: this.configService.get('DB_USERNAME2', 'app_reporte_ccc'),
-      password: this.configService.get(
-        'DB_PASSWORD2',
-        'TuContraseñaSegura123!',
-      ),
-      database: this.configService.get('DB_DATABASE2', 'CCC_HistorialLlamadas'),
+      server: this.configService.getOrThrow<string>('DB_HOST2'),
+      port: parseInt(this.configService.getOrThrow<string>('DB_PORT2'), 10),
+      user: this.configService.getOrThrow<string>('DB_USERNAME2'),
+      password: this.configService.getOrThrow<string>('DB_PASSWORD2'),
+      database: this.configService.getOrThrow<string>('DB_DATABASE2'),
     };
 
     this.logger.log(

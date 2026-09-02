@@ -1,4 +1,5 @@
 # Manual técnico de phishing educativo
+
 ## Carven2
 
 **Proyectos:** `nestjs-procesos` y `proyecto-one`  
@@ -28,13 +29,12 @@ Usuario -> /carven2 -> POST /phishing/registrar -> phishing_registros.json
 Administrador -> /carven2/admin -> consulta, exportación y eliminación
 ```
 
-Al abrir `/carven2` se registra una visita. Al enviar CH y contraseña, se registra un intento.
+Al abrir `/carven2` se registra una visita. Al enviar el identificador de prueba, se registra un intento.
 
 Los datos almacenados incluyen:
 
 - ID.
 - CH.
-- Contraseña capturada.
 - IP.
 - Navegador.
 - Página.
@@ -60,26 +60,26 @@ npm run dev
 El frontend utiliza actualmente:
 
 ```text
-http://192.168.28.35:3002
+http://localhost:3001
 ```
 
 El backend usa `PORT` o, por defecto, el puerto `3001`. Debe existir un proxy o una configuración que alinee ambos puertos.
 
 ## 4. Rutas principales
 
-| Método | Endpoint | Función |
-|---|---|---|
-| POST | `/phishing/registrar` | Registrar visita o intento |
-| POST | `/phishing/verify-admin` | Validar acceso administrativo |
-| GET | `/phishing/registros` | Consultar registros |
-| GET | `/phishing/stats` | Consultar estadísticas |
-| DELETE | `/phishing/delete/:id` | Eliminar un registro |
-| DELETE | `/phishing/delete-all` | Eliminar todos |
-| GET | `/phishing/export/txt` | Exportar TXT |
-| GET | `/phishing/export/excel` | Exportar CSV |
-| GET | `/phishing/json` | Ver registros en JSON |
-| GET | `/phishing/download-json` | Descargar el JSON |
-| GET | `/phishing/ver` | Mostrar registros en HTML |
+| Método | Endpoint                  | Función                       |
+| ------ | ------------------------- | ----------------------------- |
+| POST   | `/phishing/registrar`     | Registrar visita o intento    |
+| POST   | `/phishing/verify-admin`  | Validar acceso administrativo |
+| GET    | `/phishing/registros`     | Consultar registros           |
+| GET    | `/phishing/stats`         | Consultar estadísticas        |
+| DELETE | `/phishing/delete/:id`    | Eliminar un registro          |
+| DELETE | `/phishing/delete-all`    | Eliminar todos                |
+| GET    | `/phishing/export/txt`    | Exportar TXT                  |
+| GET    | `/phishing/export/excel`  | Exportar CSV                  |
+| GET    | `/phishing/json`          | Ver registros en JSON         |
+| GET    | `/phishing/download-json` | Descargar el JSON             |
+| GET    | `/phishing/ver`           | Mostrar registros en HTML     |
 
 ## 5. Panel administrativo
 
@@ -97,7 +97,7 @@ Muestra:
 - Datos capturados.
 - Opciones de exportación y eliminación.
 
-La contraseña actual está escrita directamente en el backend como `admin123`. No existe sesión ni límite de intentos.
+La contraseña administrativa se configura mediante `PHISHING_ADMIN_PASSWORD` y no debe escribirse en el código ni en la documentación. El endpoint requiere una integración de autenticación y control de intentos antes de producción.
 
 ## 6. Persistencia
 
@@ -117,10 +117,10 @@ phishing_registros_backup_YYYY-MM-DD.json
 
 ## 7. Riesgos importantes
 
-- Las contraseñas se guardan en texto plano.
+- El módulo no almacena ni exporta contraseñas; los ejercicios deben usar identificadores ficticios.
 - Los endpoints administrativos no tienen autenticación propia suficiente.
 - `/phishing/ver` muestra registros sin pedir contraseña.
-- La contraseña administrativa está fija en el código.
+- La contraseña administrativa se obtiene exclusivamente desde el entorno.
 - Los archivos CSV pueden quedar en `temp/`.
 - No hay control de concurrencia para varias instancias del backend.
 

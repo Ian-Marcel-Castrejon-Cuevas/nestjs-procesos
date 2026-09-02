@@ -11,13 +11,18 @@ import { StatusModule } from './status/status.module';
 import { DevolucionesModule } from './devoluciones/devoluciones.module';
 import { CccDownloaderModule } from './ccc-downloader/ccc-downloader.module';
 
+const modoDemo = process.env.DEMO_MODE === 'true';
+
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: '.env', // Especifica explícitamente el archivo
     }),
-    TypeOrmModule.forRoot({
+    ...(modoDemo
+      ? []
+      : [
+          TypeOrmModule.forRoot({
       type: 'mssql',
       host: process.env.DB_SERVER,
       port: parseInt(process.env.DB_PORT || '1433'),
@@ -34,15 +39,20 @@ import { CccDownloaderModule } from './ccc-downloader/ccc-downloader.module';
         connectionTimeout: 30000,
         requestTimeout: 30000,
       },
-    }),
-    VerificacionModule,
-    ReporteModule,
-    EnvioInboundModule,
+          }),
+        ]),
+    ...(modoDemo
+      ? []
+      : [VerificacionModule, ReporteModule, EnvioInboundModule]),
     PhishingModule,
-    LeyendasModule,
-    StatusModule,
-    DevolucionesModule,
-    CccDownloaderModule,
+    ...(modoDemo
+      ? []
+      : [
+          LeyendasModule,
+          StatusModule,
+          DevolucionesModule,
+          CccDownloaderModule,
+        ]),
   ],
 })
 /**
